@@ -15,6 +15,48 @@ class Dimension:
         self.dependenciesByPath = []
         self.isExcluded = False
         self.excludedReason = None
+        self.startLocationField = None
+        self.endLocationField = None
+        self.distanceUnits = None
+        self.sqlLongitude = None
+        self.sqlLatitute = None
+
+    def setDistanceDimensionSQL(self, startDimLongitude, startDimLatitute, endDimLongitude ,endDimLatitute):
+        distanceUnits=self.distanceUnits
+
+
+        if 'miles' in distanceUnits:
+            print("---------------------------------------------------------------"+distanceUnits)
+            self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 1.60934)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
+            self.transformTableDimensions()
+            print(self.sql)
+        elif 'meters' in distanceUnits:
+            print("---------------------------------------------------------------"+distanceUnits)
+            self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 0.001)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
+            self.transformTableDimensions()
+            print(self.sql)
+        elif 'feet' in distanceUnits:
+            print("---------------------------------------------------------------"+distanceUnits)
+            self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 0.0003048)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
+            self.transformTableDimensions()
+            print(self.sql)
+        elif 'nautical_miles' in distanceUnits:
+            print("---------------------------------------------------------------"+distanceUnits)
+            self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 1.852)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
+            self.transformTableDimensions()
+            print(self.sql)
+        elif 'yards' in distanceUnits:
+            print("---------------------------------------------------------------"+distanceUnits)
+            self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 0.0009144)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
+            self.transformTableDimensions()
+            print(self.sql)
+        elif 'kilometers' in distanceUnits:
+            print("---------------------------------------------------------------"+distanceUnits)
+            self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END))'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
+            self.transformTableDimensions()
+            print(self.sql)
+           
+        
 
     def setExcludedDimension(self):
         found = re.search(r'\$\{\s*\w+\s*\.\s*\w+\s*\}', self.sql)
@@ -212,7 +254,13 @@ class Dimension:
         query = "CASE WHEN (TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12 < 0 THEN CEIL((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) ELSE FLOOR((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) END".format(created_at=sql_start,delivered_at=sql_end)
         print(query)
         self.sql = query
+    def processDistanceDimension(self,distanceUnits,startLocationField,endLocationField,latitude,longitude):
+        self.distanceUnits = distanceUnits
+        self.startLocationField = startLocationField
+        self.endLocationField = endLocationField
+        
 
+        print("In processDistanceDimension function-----------------"+distanceUnits+startLocationField+endLocationField)
 
     def setDimension(self, dimension):
 
@@ -235,10 +283,10 @@ class Dimension:
 
         if self.type == 'location':
             if 'sql_latitude' in dimension:
-                sqlLatitude = dimension['sql_latitude']
+                self.sqlLatitude = dimension['sql_latitude']
             if 'sql_longitude' in dimension:
-                sqlLongitude = dimension['sql_longitude']
-            self.sql = self.transformLocationDimension(sqlLongitude, sqlLatitude)
+                self.sqlLongitude = dimension['sql_longitude']
+            self.sql = self.transformLocationDimension(self.sqlLongitude, self.sqlLatitude)
             
 
         self.transformTableDimensions()
@@ -297,12 +345,60 @@ class Dimension:
                 sql_end = dimension['sql_end']
                 #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_second(sql_start,sql_end)
-                
+        if self.type=='distance':
+            print("-----------------------------------------------------------------"+self.type)
+            start_location_field=dimension['start_location_field']
+            end_location_field=dimension['end_location_field']
+            units=dimension['units']
+            latitude=None
+            longitude=None
+            #print("units:"+units+",start_location_field:"+start_location_field+",end_location_field:"+end_location_field)
+            self.processDistanceDimension(units,start_location_field,end_location_field,latitude,longitude)
+            
 
-                
 
         self.dependencies = self.getDependencies()
-        
+
+    
+    def getProcessedDistanceDimensions(self, dimensions):
+        cleanedDimensions = dimensions
+        for i in range(len(dimensions)):
+            #cleanedDimensions=dict()
+            currentDimension = dimensions[i]
+            #print("$$$$$$$$$$$$$$$$$$$$$:currentDimension:"+str(currentDimension))
+            if currentDimension.type == 'distance':
+                name = currentDimension.name
+                #print("$$$$$$$$$$$$$$$$$$$$$:name:"+name)
+
+                startLocationField = currentDimension.startLocationField
+                #print("$$$$$$$$$$$$$$$$$$$$$:startLocationField:"+startLocationField)
+
+                endLocationField = currentDimension.endLocationField
+                #print("$$$$$$$$$$$$$$$$$$$$$:endLocationField:"+endLocationField)
+
+                Units = currentDimension.distanceUnits
+                #print("$$$$$$$$$$$$$$$$$$$$$:Units:"+Units)
+
+                #print("{}:{}:{}:{}".format(name,Units,startLocationField, endLocationField))
+                startDim = currentDimension.getDimensionByName(startLocationField, dimensions)
+                endDim = currentDimension.getDimensionByName(endLocationField, dimensions)
+                startDimLongitude=startDim.sqlLongitude
+                startDimLatitute=startDim.sqlLatitude
+                endDimLongitude=endDim.sqlLongitude
+                endDimLatitute=endDim.sqlLatitude
+
+
+                print("{} {} {} {}".format(startDimLatitute, startDimLatitute, endDimLongitude ,endDimLatitute))
+                #print("In getProcessedDistanceDimensions function-----------------"+str(startDim))
+                #print("In getProcessedDistanceDimensions function-----------------"+str(endDim))
+
+                currentDimension.setDistanceDimensionSQL(startDimLongitude, startDimLatitute, endDimLongitude ,endDimLatitute)
+
+                cleanedDimensions[i] = currentDimension
+
+
+                
+        return cleanedDimensions    
 
     def getIndex(self, dimensions):
         
@@ -337,7 +433,7 @@ class Dimension:
             SQL RAW:            {sql_raw}
             SQL:                {sql}
             IsExcluded :        {isExcluded}
-            ExcludedReason :    {excludedReason}
+            ExcludedReason :    {excludedReason}  
             """.format(name = self.name, type = self.type, sql = self.sql, primary_key = self.primaryKey, hidden = self.hidden, dependencies = self.dependencies, sql_raw = self.sql_raw, dependenciesByPath = self.dependenciesByPath, isExcluded = self.isExcluded, excludedReason = self.excludedReason)
 
     def getDimensionName(self):
