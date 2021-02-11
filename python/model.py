@@ -87,7 +87,7 @@ def main():
             logging.info(viewFilesList)
             for viewFileItem in viewFilesList:
 
-                if viewFileItem['FileName'] != 'users.view.lkml':
+                if viewFileItem['FileName'] != 'users.view.lkml' and viewFileItem['FileName'] != 'user_order_facts.view.lkml':
                     continue
 
                 viewFile = '{}{}'.format(viewFileItem["DirName"], viewFileItem["FileName"])
@@ -101,6 +101,7 @@ def main():
                 for view in views:
                     logging.info("Viewinfo")
                     logging.info(view)
+                    print(view)
                     
                     view.schemaName = model.connection.schemaName
                     view.databaseName = model.connection.databaseName
@@ -119,21 +120,36 @@ def main():
                     logging.info("-------------------------Invalid Dimensions---------------------------------------------")
                     for dimension_ in view.excludedDimensions:
                         logging.info(dimension_)
-                    
-                    view.getViewSQL()
-
-                    view.injectViewSchema()
-
-                    view.setDBTModelName()
 
                     viewList.append(view)
 
+
+                '''
+                Process VIEWS AND PDTS
+                '''
+
                 for view in viewList:
+                    if view.viewType == 'VIEW' or view.viewType == 'PDT':
+                        view.getViewSQL()
+                        view.injectViewSchema()
+                        view.setDBTModelName()
+                        view.injectSqlTableName(viewList)
+                        view.injectSqlTableNameInSQLTriggerValue(viewList)
+                        view.writedbtModel()
+
+
+                '''
+                Process VIEWS AND PDTS
+                '''
+
+
+                for view in viewList:
+                    view.getViewSQL()
+                    view.injectViewSchema()
+                    view.setDBTModelName()
                     view.injectSqlTableName(viewList)
                     view.injectSqlTableNameInSQLTriggerValue(viewList)
                     view.writedbtModel()
-
-
 
 if __name__ == "__main__":
     main()

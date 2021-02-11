@@ -1,4 +1,5 @@
 import logging
+import os
 
 class Logger:
     def __init__(self):
@@ -7,7 +8,9 @@ class Logger:
 
     def getLogger(self):
         logger = logging
-        logger.basicConfig(filename='../logs/converter.log',level=logging.INFO, filemode='a', format = '%(asctime)s:%(levelname)s:%(message)s')
+        baseDir = '../logs'
+        os.makedirs(baseDir, exist_ok=True)
+        logger.basicConfig(filename='{baseDir}/converter.log'.format(baseDir = baseDir),level=logging.INFO, filemode='a', format = '%(asctime)s:%(levelname)s:%(message)s')
         return logger
 
 

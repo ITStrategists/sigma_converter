@@ -20,49 +20,63 @@ class Dimension:
         self.distanceUnits = None
         self.sqlLongitude = None
         self.sqlLatitute = None
+        self.dimensionType = None
 
     def setDistanceDimensionSQL(self, startDimLongitude, startDimLatitute, endDimLongitude ,endDimLatitute):
         distanceUnits=self.distanceUnits
 
 
         if 'miles' in distanceUnits:
-            print("---------------------------------------------------------------"+distanceUnits)
             self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 1.60934)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
             self.transformTableDimensions()
-            print(self.sql)
         elif 'meters' in distanceUnits:
-            print("---------------------------------------------------------------"+distanceUnits)
             self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 0.001)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
             self.transformTableDimensions()
-            print(self.sql)
         elif 'feet' in distanceUnits:
-            print("---------------------------------------------------------------"+distanceUnits)
             self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 0.0003048)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
             self.transformTableDimensions()
-            print(self.sql)
         elif 'nautical_miles' in distanceUnits:
-            print("---------------------------------------------------------------"+distanceUnits)
             self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 1.852)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
             self.transformTableDimensions()
-            print(self.sql)
         elif 'yards' in distanceUnits:
-            print("---------------------------------------------------------------"+distanceUnits)
             self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END) / 0.0009144)'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
             self.transformTableDimensions()
-            print(self.sql)
         elif 'kilometers' in distanceUnits:
-            print("---------------------------------------------------------------"+distanceUnits)
             self.sql = '((CASE WHEN round({endDimLatitute},1)  = {endDimLatitute}  AND round({endDimLongitude},1)  = {endDimLongitude}  THEN 0 ELSE ACOS(SIN(RADIANS(round({endDimLatitute},1) )) * SIN(RADIANS({startDimLatitute})) + COS(RADIANS(round({endDimLatitute},1) )) * COS(RADIANS({startDimLatitute})) * COS(RADIANS({startDimLongitude}  - round({endDimLongitude},1) ))) * 6371 END))'.format(startDimLongitude=startDimLongitude, startDimLatitute=startDimLatitute, endDimLongitude=endDimLongitude ,endDimLatitute=endDimLatitute)
-            self.transformTableDimensions()
-            print(self.sql)
-           
-        
+            self.transformTableDimensions()                   
 
     def setExcludedDimension(self):
-        found = re.search(r'\$\{\s*\w+\s*\.\s*\w+\s*\}', self.sql)
-        if found:
+
+        if self.dimensionType == 'MEASURE':
             self.isExcluded = True
-            self.excludedReason = "Using other view's dimensions"
+            if self.excludedReason == '' or self.excludedReason == None:
+                self.excludedReason = "Dimension is a Measure."
+            else:
+                self.excludedReason = self.excludedReason + " And Dimension is a Measure."
+
+        otherViewCheck = re.search(r'\$\{\s*\w+\s*\.\s*\w+\s*\}', self.sql)
+        if otherViewCheck:
+            self.isExcluded = True
+            if self.excludedReason == '' or self.excludedReason == None:
+                self.excludedReason = "Dimension References other views."
+            else:
+                self.excludedReason = self.excludedReason + " And Dimension References other views."
+
+        liquidCondition = re.search(r'\{%.*%\}', self.sql)        
+        if liquidCondition:
+            self.isExcluded = True
+            if self.excludedReason == '' or self.excludedReason == None:
+                self.excludedReason = "Liquid Condition"
+            else:
+                self.excludedReason = self.excludedReason + " And Dimension is Liquid Condition."
+
+        liquidTemplate = re.search(r'\{\{.*\}\}', self.sql)        
+        if liquidTemplate:
+            self.isExcluded = True
+            if self.excludedReason == '' or self.excludedReason == None:
+                self.excludedReason = "Liquid Template"
+            else:
+                self.excludedReason = self.excludedReason + " And Dimension is Liquid Template."            
 
     def getDependencies(self):
 
@@ -98,31 +112,20 @@ class Dimension:
    
    
     def transformTierDimension(self, tiers ,style):
-        print('----------------------------------------------')
-        print('----------------------------------------------')
-        print(tiers)
-        print(style)
-        print(self.sql)
         if tiers is not None:
             difference=int(tiers[1])-int(tiers[0])
-            print(difference)
             finalquery=''
             i=00
             for value in tiers:
-                print(value)
                 if style=='integer':
                     diff_from_value=int(value)-int(difference)
                     minus_one_value=int(value)-1
                     if int(value)==0:
                         query="CASE WHEN {}  < {} THEN 'Below {}'".format(self.sql,value,value)
                         finalquery = '{} {}'.format(finalquery, query)
-                        #queryF=query
                     if int(value)>0:
                         query="WHEN {}  >= {} AND {}  < {} THEN '{} to {}'".format(self.sql,diff_from_value,self.sql,value,diff_from_value,minus_one_value)
-                        print(query)
                         finalquery = '{} {}'.format(finalquery, query)
-                        #queryF=queryF
-                    print(value)
                     
                     
                 if style=='relational':
@@ -131,13 +134,11 @@ class Dimension:
                     if int(value)==0:
                         query="CASE WHEN {}  < {} THEN '< {}'".format(self.sql,float(value),float(value))
                         finalquery = '{} {}'.format(finalquery, query)
-                        #queryF=query
+                    
                     if int(value)>0:
                         query="WHEN {}  >= {} AND {}  < {} THEN '>={} and <{}'".format(self.sql,float(diff_from_value),self.sql,float(value),float(diff_from_value),float(minus_one_value))
-                        print(query)
                         finalquery = '{} {}'.format(finalquery, query)
-                        #queryF=queryF
-                    print(value)
+
 
                 
                 if style=='classic':
@@ -147,16 +148,9 @@ class Dimension:
                     if int(value)==0:
                         query="CASE WHEN {}  < {} THEN 'T{:02d} (-inf,{})'".format(self.sql,float(value),i,float(value))
                         finalquery = '{} {}'.format(finalquery, query)
-                        #queryF=query
-                        print(query)
                     if int(value)>0:
                         query="WHEN {}  >= {} AND {}  < {} THEN 'T{:02d} [{},{})'".format(self.sql,float(diff_from_value),self.sql,float(value),i,float(diff_from_value),float(minus_one_value))
-                        print(query)
                         finalquery = '{} {}'.format(finalquery, query)
-                        #queryF=queryF
-                    
-                    #print(i)
-                    print(value)
 
                 if style=='interval':
                     
@@ -165,15 +159,12 @@ class Dimension:
                     if int(value)==0:
                         query="CASE WHEN {}  < {} THEN '(-inf,{})'".format(self.sql,float(value),float(value))
                         finalquery = '{} {}'.format(finalquery, query)
-                        #queryF=query
-                        print(query)
                     if int(value)>0:
                         query="WHEN {}  >= {} AND {}  < {} THEN '[{},{})'".format(self.sql,float(diff_from_value),self.sql,float(value),float(diff_from_value),float(minus_one_value))
-                        print(query)
                         finalquery = '{} {}'.format(finalquery, query)
 
                 i=i+1
-            #queryF=queryF
+
             if style == 'integer':
                 query="WHEN {}  >= {} THEN '{} or Above' ELSE 'Undefined' END".format(self.sql,value,value)
                 finalquery = '{} {}'.format(finalquery, query)
@@ -186,83 +177,70 @@ class Dimension:
             elif style == 'interval':
                 query="WHEN {}  >= {} THEN '[{},inf)' ELSE 'Undefined' END".format(self.sql,float(value),float(value))
                 finalquery = '{} {}'.format(finalquery, query)
-        #print(str(finalquery))
-        print(finalquery)
 
 
     def duration_day(self, sql_start, sql_end):
-        sql_start=sql_start
-        sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
-        query = "(TIMESTAMPDIFF(DAY, {} , {}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({}), {}) = TIMESTAMPDIFF(SECOND, TO_DATE({} ), {} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({}), {}) < TIMESTAMPDIFF(SECOND, TO_DATE({} ), {} ) THEN CASE WHEN {}  < {} THEN -1 ELSE 0 END ELSE CASE WHEN {}  > {} THEN 1 ELSE 0 END END)".format(sql_start,sql_end,sql_end,sql_end,sql_start,sql_start,sql_end,sql_end,sql_start,sql_start,sql_start,sql_end,sql_start,sql_end)
-        print(query)
+        query = "(TIMESTAMPDIFF(DAY, {sql_start} , {sql_end}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({sql_start}), {sql_end}) = TIMESTAMPDIFF(SECOND, TO_DATE({sql_start} ), {sql_end} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({sql_start}), {sql_end}) < TIMESTAMPDIFF(SECOND, TO_DATE({sql_start} ), {sql_end} ) THEN CASE WHEN {sql_start}  < {sql_end} THEN -1 ELSE 0 END ELSE CASE WHEN {sql_start}  > {sql_end} THEN 1 ELSE 0 END END)".format(sql_start = sql_start, sql_end = sql_end)
         self.sql = query
+
     def duration_hour(self, sql_start, sql_end):
         sql_start=sql_start
         sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
         query = "CASE WHEN TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / (60*60) < 0 THEN CEIL(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / (60*60)) ELSE FLOOR(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / (60*60)) END".format(created_at=sql_start,delivered_at=sql_end)
-        print(query)
         self.sql = query
+
     def duration_second(self, sql_start, sql_end):
         sql_start=sql_start
         sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
         query = "TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at})".format(created_at=sql_start,delivered_at=sql_end)
-        print(query)
         self.sql = query
+
     def duration_minute(self, sql_start, sql_end):
         sql_start=sql_start
         sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
         query = "CASE WHEN TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / 60 < 0 THEN CEIL(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / 60) ELSE FLOOR(TIMESTAMPDIFF(SECOND, {created_at} , {delivered_at}) / 60) END".format(created_at=sql_start,delivered_at=sql_end)
-        print(query)
         self.sql = query
+
     def duration_month(self, sql_start, sql_end):
         sql_start=sql_start
         sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
         query = "(TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END)".format(created_at=sql_start,delivered_at=sql_end)
-        print(query)
         self.sql = query
+
     def duration_quarter(self, sql_start, sql_end):
         sql_start=sql_start
         sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
         query = "CASE WHEN (TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 3 < 0 THEN CEIL((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 3) ELSE FLOOR((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 3) END".format(created_at=sql_start,delivered_at=sql_end)
-        print(query)
         self.sql = query
+
     def duration_weeks(self, sql_start, sql_end):
         sql_start=sql_start
         sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
         query = "CASE WHEN (TIMESTAMPDIFF(DAY, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 7 < 0 THEN CEIL((TIMESTAMPDIFF(DAY, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 7) ELSE FLOOR((TIMESTAMPDIFF(DAY, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, TO_DATE({delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, TO_DATE({created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 7) END".format(created_at=sql_start,delivered_at=sql_end)
-        print(query)
         self.sql = query
+
     def duration_years(self, sql_start, sql_end):
         sql_start=sql_start
         sql_end=sql_end
-        #print("Duration Day Function"+sql_start+sql_end)
         type = 'string'
         query = "CASE WHEN (TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12 < 0 THEN CEIL((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) ELSE FLOOR((TIMESTAMPDIFF(MONTH, {created_at} , {delivered_at}) + CASE WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) = TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN 0 WHEN TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {delivered_at}), {delivered_at}) < TIMESTAMPDIFF(SECOND, DATE_TRUNC('month', {created_at} ), {created_at} ) THEN CASE WHEN {created_at}  < {delivered_at} THEN -1 ELSE 0 END ELSE CASE WHEN {created_at}  > {delivered_at} THEN 1 ELSE 0 END END) / 12) END".format(created_at=sql_start,delivered_at=sql_end)
-        print(query)
         self.sql = query
+
     def processDistanceDimension(self,distanceUnits,startLocationField,endLocationField,latitude,longitude):
         self.distanceUnits = distanceUnits
         self.startLocationField = startLocationField
         self.endLocationField = endLocationField
-        
 
-        print("In processDistanceDimension function-----------------"+distanceUnits+startLocationField+endLocationField)
 
-    def setDimension(self, dimension):
+    def setDimension(self, dimension, dimensionType):
+        self.dimensionType = dimensionType
 
         if 'name' in dimension:
             self.name = dimension['name']
@@ -304,58 +282,45 @@ class Dimension:
             self.transformYesNoDiemension()
 
         if 'duration' in self.type:
-            print("Duration----------------------------------------------------------------------------------------"+self.type)
             if 'day' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_day(sql_start,sql_end)
             elif 'hour' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_hour(sql_start,sql_end)
             elif 'minute' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_minute(sql_start,sql_end)
             elif 'month' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_month(sql_start,sql_end)
             elif 'quarter' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_quarter(sql_start,sql_end)
             elif 'week' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_weeks(sql_start,sql_end)
             elif 'year' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_years(sql_start,sql_end)
             elif 'second' in self.type:
                 sql_start = dimension['sql_start']
                 sql_end = dimension['sql_end']
-                #print("&&&&&&&&&&&&&&&&&sql_start:"+sql_start+", sql_end:"+sql_end)
                 self.duration_second(sql_start,sql_end)
         if self.type=='distance':
-            print("-----------------------------------------------------------------"+self.type)
             start_location_field=dimension['start_location_field']
             end_location_field=dimension['end_location_field']
             units=dimension['units']
             latitude=None
             longitude=None
-            #print("units:"+units+",start_location_field:"+start_location_field+",end_location_field:"+end_location_field)
             self.processDistanceDimension(units,start_location_field,end_location_field,latitude,longitude)
-            
-
 
         self.dependencies = self.getDependencies()
 
@@ -363,40 +328,20 @@ class Dimension:
     def getProcessedDistanceDimensions(self, dimensions):
         cleanedDimensions = dimensions
         for i in range(len(dimensions)):
-            #cleanedDimensions=dict()
             currentDimension = dimensions[i]
-            #print("$$$$$$$$$$$$$$$$$$$$$:currentDimension:"+str(currentDimension))
             if currentDimension.type == 'distance':
                 name = currentDimension.name
-                #print("$$$$$$$$$$$$$$$$$$$$$:name:"+name)
-
                 startLocationField = currentDimension.startLocationField
-                #print("$$$$$$$$$$$$$$$$$$$$$:startLocationField:"+startLocationField)
-
                 endLocationField = currentDimension.endLocationField
-                #print("$$$$$$$$$$$$$$$$$$$$$:endLocationField:"+endLocationField)
-
                 Units = currentDimension.distanceUnits
-                #print("$$$$$$$$$$$$$$$$$$$$$:Units:"+Units)
-
-                #print("{}:{}:{}:{}".format(name,Units,startLocationField, endLocationField))
                 startDim = currentDimension.getDimensionByName(startLocationField, dimensions)
                 endDim = currentDimension.getDimensionByName(endLocationField, dimensions)
                 startDimLongitude=startDim.sqlLongitude
                 startDimLatitute=startDim.sqlLatitude
                 endDimLongitude=endDim.sqlLongitude
                 endDimLatitute=endDim.sqlLatitude
-
-
-                print("{} {} {} {}".format(startDimLatitute, startDimLatitute, endDimLongitude ,endDimLatitute))
-                #print("In getProcessedDistanceDimensions function-----------------"+str(startDim))
-                #print("In getProcessedDistanceDimensions function-----------------"+str(endDim))
-
                 currentDimension.setDistanceDimensionSQL(startDimLongitude, startDimLatitute, endDimLongitude ,endDimLatitute)
-
                 cleanedDimensions[i] = currentDimension
-
-
                 
         return cleanedDimensions    
 
@@ -433,8 +378,9 @@ class Dimension:
             SQL RAW:            {sql_raw}
             SQL:                {sql}
             IsExcluded :        {isExcluded}
-            ExcludedReason :    {excludedReason}  
-            """.format(name = self.name, type = self.type, sql = self.sql, primary_key = self.primaryKey, hidden = self.hidden, dependencies = self.dependencies, sql_raw = self.sql_raw, dependenciesByPath = self.dependenciesByPath, isExcluded = self.isExcluded, excludedReason = self.excludedReason)
+            ExcludedReason :    {excludedReason}
+            dimensionType  :    {dimensionType}  
+            """.format(name = self.name, type = self.type, sql = self.sql, primary_key = self.primaryKey, hidden = self.hidden, dependencies = self.dependencies, sql_raw = self.sql_raw, dependenciesByPath = self.dependenciesByPath, isExcluded = self.isExcluded, excludedReason = self.excludedReason, dimensionType = self.dimensionType)
 
     def getDimensionName(self):
         return self.name

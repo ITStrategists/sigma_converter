@@ -21,6 +21,7 @@ class View:
         self.allDimensions = []
         self.validDimensions = []
         self.excludedDimensions = []
+        self.exploreSourceName = None
 
     def setDBTModelName(self):
         self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_') + '_' + self.name.lower().strip().replace(' ', '_')
@@ -31,22 +32,26 @@ class View:
     def setView(self, view):
 
         if 'derived_table' in view:
-            
-            if 'sql' in view['derived_table']:
-                self.sql = view['derived_table']['sql']
-                self.sql = self.sql.replace('"','\"')
 
-            if 'persist_for' in view['derived_table']:
-                self.persistedSQL = view['derived_table']['persist_for']
-                self.persistedSQL = self.persistedSQL.replace('"', "\"")
-                self.persistedType = 'PERSIST_FOR'
+            if 'explore_source' in view['derived_table']:
+                self.viewType = 'NDT'
+                self.exploreSourceName = view['derived_table']['explore_source']['name']
+            else:        
+                if 'sql' in view['derived_table']:
+                    self.sql = view['derived_table']['sql']
+                    self.sql = self.sql.replace('"','\"')
 
-            if 'sql_trigger_value' in view['derived_table']:
-                self.persistedSQL = view['derived_table']['sql_trigger_value']
-                self.persistedSQL = self.persistedSQL.replace('"', "\"")
-                self.persistedType = 'SQL_TRIGGER_VALUE'
+                if 'persist_for' in view['derived_table']:
+                    self.persistedSQL = view['derived_table']['persist_for']
+                    self.persistedSQL = self.persistedSQL.replace('"', "\"")
+                    self.persistedType = 'PERSIST_FOR'
 
-            self.viewType = 'PDT'
+                if 'sql_trigger_value' in view['derived_table']:
+                    self.persistedSQL = view['derived_table']['sql_trigger_value']
+                    self.persistedSQL = self.persistedSQL.replace('"', "\"")
+                    self.persistedType = 'SQL_TRIGGER_VALUE'
+
+                self.viewType = 'PDT'
 
         elif 'sql_table_name' in view:
             self.viewType = 'VIEW'
@@ -60,7 +65,7 @@ class View:
             
             for dimensionRow in view['dimensions']:
                 dimensionObj = Dimension()
-                dimensionObj.setDimension(dimensionRow)
+                dimensionObj.setDimension(dimensionRow, 'DIMENSION')
                 dimensions_.append(dimensionObj)
 
         dimensionGroupList = []
@@ -223,8 +228,7 @@ class View:
 
                                 dimension_ = Dimension()
                                 dict_ = {"name": name, "type":type, "sql": sql}
-                                print(dict_)
-                                dimension_.setDimension(dict_)
+                                dimension_.setDimension(dict_, 'DIMENSION')
                                 dimensionGroupList.append(dimension_)
 
                     elif dimensionGroupType == 'duration':
@@ -246,15 +250,10 @@ class View:
                                 sql_start = dimension_groupRow['sql_start']
                                 sql_end = dimension_groupRow['sql_end']
                                 dict_ = {"name":name, "type":type, "sql":sql, "sql_start":sql_start, "sql_end":sql_end}
-                                print(dict_)
                                 dimension_ = Dimension()
                                 dict_ = {"name": name, "type":type, "sql": sql, "sql_start":sql_start, "sql_end":sql_end}
-                                print(dict_)
-                                dimension_.setDimension(dict_)
+                                dimension_.setDimension(dict_, 'DIMENSION')
                                 dimensionGroupList.append(dimension_)
-
-
-
 
         for dimensionItem in dimensionGroupList:
             dimensions_.append(dimensionItem)     
@@ -395,10 +394,12 @@ class View:
         return """
             View: ---------------------------------------------------------------------------------------------------------------
             View Name       :     {name}
+            View Type       :     {viewType}
+            View Source     :     {exploreSourceName}
             Persisted Type  :     {persistedType}
             Persisted SQL   :     {persistedSQL}
             SQL             :     {sql}
-            """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL)
+            """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL, viewType = self.viewType, exploreSourceName = self.exploreSourceName)
 
     
     def getViewInfomationFromFile(self, fileName):
