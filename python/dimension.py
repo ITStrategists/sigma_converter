@@ -240,7 +240,9 @@ class Dimension:
 
 
     def setDimension(self, dimension, dimensionType):
+
         self.dimensionType = dimensionType
+
 
         if 'name' in dimension:
             self.name = dimension['name']
@@ -257,72 +259,96 @@ class Dimension:
         if 'primary_key' in dimension:
             self.primary_key = dimension['primary_key']
 
-        self.sql = self.sql_raw
+        
+        if self.dimensionType == 'DIMENSION':
 
-        if self.type == 'location':
-            if 'sql_latitude' in dimension:
-                self.sqlLatitude = dimension['sql_latitude']
-            if 'sql_longitude' in dimension:
-                self.sqlLongitude = dimension['sql_longitude']
-            self.sql = self.transformLocationDimension(self.sqlLongitude, self.sqlLatitude)
-            
+            self.sql = self.sql_raw
 
-        self.transformTableDimensions()
+            if self.type == 'location':
+                if 'sql_latitude' in dimension:
+                    self.sqlLatitude = dimension['sql_latitude']
+                if 'sql_longitude' in dimension:
+                    self.sqlLongitude = dimension['sql_longitude']
+                self.sql = self.transformLocationDimension(self.sqlLongitude, self.sqlLatitude)
+                
 
-        if self.type == 'zipcode':
-            self.transformZipCodeDimension()
-        if self.type == 'tier':
-            tiers = None
-            if 'tiers' in dimension:
-                tiers = dimension['tiers']
-                style = dimension['style']
-                self.transformTierDimension(tiers,style)
+            self.transformTableDimensions()
 
-        if self.type == 'yesno':
-            self.transformYesNoDiemension()
+            if self.type == 'zipcode':
+                self.transformZipCodeDimension()
+            if self.type == 'tier':
+                tiers = None
+                if 'tiers' in dimension:
+                    tiers = dimension['tiers']
+                    style = dimension['style']
+                    self.transformTierDimension(tiers,style)
 
-        if 'duration' in self.type:
-            if 'day' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_day(sql_start,sql_end)
-            elif 'hour' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_hour(sql_start,sql_end)
-            elif 'minute' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_minute(sql_start,sql_end)
-            elif 'month' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_month(sql_start,sql_end)
-            elif 'quarter' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_quarter(sql_start,sql_end)
-            elif 'week' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_weeks(sql_start,sql_end)
-            elif 'year' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_years(sql_start,sql_end)
-            elif 'second' in self.type:
-                sql_start = dimension['sql_start']
-                sql_end = dimension['sql_end']
-                self.duration_second(sql_start,sql_end)
-        if self.type=='distance':
-            start_location_field=dimension['start_location_field']
-            end_location_field=dimension['end_location_field']
-            units=dimension['units']
-            latitude=None
-            longitude=None
-            self.processDistanceDimension(units,start_location_field,end_location_field,latitude,longitude)
+            if self.type == 'yesno':
+                self.transformYesNoDiemension()
 
+            if 'duration' in self.type:
+                if 'day' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_day(sql_start,sql_end)
+                elif 'hour' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_hour(sql_start,sql_end)
+                elif 'minute' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_minute(sql_start,sql_end)
+                elif 'month' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_month(sql_start,sql_end)
+                elif 'quarter' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_quarter(sql_start,sql_end)
+                elif 'week' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_weeks(sql_start,sql_end)
+                elif 'year' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_years(sql_start,sql_end)
+                elif 'second' in self.type:
+                    sql_start = dimension['sql_start']
+                    sql_end = dimension['sql_end']
+                    self.duration_second(sql_start,sql_end)
+            if self.type=='distance':
+                start_location_field=dimension['start_location_field']
+                end_location_field=dimension['end_location_field']
+                units=dimension['units']
+                latitude=None
+                longitude=None
+                self.processDistanceDimension(units,start_location_field,end_location_field,latitude,longitude)
+
+        elif self.dimensionType == 'MEASURE':
+            self.sql = self.sql_raw
+            self.transformTableDimensions()
+            self.processMeasures()
+        
         self.dependencies = self.getDependencies()
+
+    def processMeasures(self):
+        if self.type.lower() == 'count':
+            if self.sql or self.sql.strip() == '':
+                self.sql = "COUNT(1)"
+            else:
+                self.sql = "COUNT({})".format(self.sql)
+
+        elif self.type.lower() == 'average':
+            self.sql = "AVG({})".format(self.sql)
+
+        elif self.type.lower() == 'sum':
+            self.sql = "SUM({})".format(self.sql)
+            
+        elif self.type.lower() == 'count_distinct':
+            self.sql = "COUNT(DISTINCT {})".format(self.sql)
 
     
     def getProcessedDistanceDimensions(self, dimensions):

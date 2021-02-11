@@ -68,6 +68,13 @@ class View:
                 dimensionObj.setDimension(dimensionRow, 'DIMENSION')
                 dimensions_.append(dimensionObj)
 
+        if 'measures' in view:
+            
+            for dimensionRow in view['measures']:
+                dimensionObj = Dimension()
+                dimensionObj.setDimension(dimensionRow, 'MEASURE')
+                dimensions_.append(dimensionObj)
+
         dimensionGroupList = []
         if 'dimension_groups' in view:
 
@@ -275,6 +282,9 @@ class View:
         self.dimensions = validDimensions
         self.validDimensions = validDimensions
         self.excludedDimensions = excludedDimensions
+
+        for v in self.excludedDimensions:
+            print(v)
 
     def checkKeyExists(self, key, dictionary):
         found = False

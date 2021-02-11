@@ -87,7 +87,7 @@ def main():
             logging.info(viewFilesList)
             for viewFileItem in viewFilesList:
 
-                if viewFileItem['FileName'] != 'users.view.lkml' and viewFileItem['FileName'] != 'user_order_facts.view.lkml':
+                if viewFileItem['FileName'] != 'order_items.view.lkml' and viewFileItem['FileName'] != 'user_order_facts.view.lkml':
                     continue
 
                 viewFile = '{}{}'.format(viewFileItem["DirName"], viewFileItem["FileName"])
