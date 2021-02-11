@@ -76,7 +76,6 @@ def main():
             logging.info(model)
             #print(model)
 
-
             viewList = []
 
             rootDir = modelFileItem["DirName"]
@@ -136,20 +135,9 @@ def main():
                         view.injectSqlTableName(viewList)
                         view.injectSqlTableNameInSQLTriggerValue(viewList)
                         view.writedbtModel()
-
-
-                '''
-                Process VIEWS AND PDTS
-                '''
-
-
                 for view in viewList:
-                    view.getViewSQL()
-                    view.injectViewSchema()
-                    view.setDBTModelName()
-                    view.injectSqlTableName(viewList)
-                    view.injectSqlTableNameInSQLTriggerValue(viewList)
-                    view.writedbtModel()
+                    if view.viewType == 'VIEW':
+                        pass
 
 if __name__ == "__main__":
     main()
