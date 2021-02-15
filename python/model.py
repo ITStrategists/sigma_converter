@@ -123,21 +123,25 @@ def main():
                     viewList.append(view)
 
 
-                '''
-                Process VIEWS AND PDTS
-                '''
+            '''
+            Process VIEWS AND PDTS
+            '''
 
-                for view in viewList:
-                    if view.viewType == 'VIEW' or view.viewType == 'PDT':
-                        view.getViewSQL()
-                        view.injectViewSchema()
-                        view.setDBTModelName()
-                        view.injectSqlTableName(viewList)
-                        view.injectSqlTableNameInSQLTriggerValue(viewList)
-                        view.writedbtModel()
-                for view in viewList:
-                    if view.viewType == 'VIEW':
-                        pass
+            for view in viewList:
+                if view.viewType == 'VIEW' or view.viewType == 'PDT':
+                    view.getViewSQL()
+                    view.injectViewSchema()
+                    view.setDBTModelName()
+                    view.injectSqlTableName(viewList)
+                    view.injectSqlTableNameInSQLTriggerValue(viewList)
+                    view.writedbtModel()
+
+            print('-----------------------Process NDTs---------------------------------------------- ')
+            for view in viewList:
+                if view.viewType == 'NDT':
+                    view.processNDT(viewList)
+
+
 
 if __name__ == "__main__":
     main()
