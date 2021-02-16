@@ -4,6 +4,12 @@
                 ) 
         }}
 
+        {{
+            config(
+                tags = ["VIEW"]
+            )
+        }}
+
         --these need to change by converter
 
         {{ config(schema = "sigma_its_sig") }}

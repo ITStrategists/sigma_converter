@@ -140,8 +140,9 @@ def main():
             for view in viewList:
                 if view.viewType == 'NDT':
                     view.processNDT(viewList)
-
-
+                    view.getNDTViewSQL()
+                    view.setDBTModelName()                    
+                    view.writedbtModel()
 
 if __name__ == "__main__":
     main()

@@ -6,6 +6,12 @@
                 ) 
         }}
 
+        {{
+            config(
+                tags = ["@@VIEWTYPE@@"]
+            )
+        }}
+
         --these need to change by converter
 
         {{ config(schema = "@@SCHEMA@@") }}

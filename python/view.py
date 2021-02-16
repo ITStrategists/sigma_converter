@@ -37,6 +37,7 @@ class View:
 
         columns_ = []
         dimension_ = Dimension()
+        column = []
 
         for column_ in columns:
             if column_.columnType == 'COLUMN':
@@ -65,40 +66,61 @@ class View:
                     column_.dimensionType = "DIMENSION"
 
             print(column_)
-            columns.append(column_)
 
-
-
-        return columns_
-
+        for dimension_ in self.allDimensions:
+            column_ = column_.getColumnByName(dimension_.name, columns)
+            dimension_.sql = column_.sql
+            dimension_.dimensionType = column_.dimensionType
+            
     def processNDT(self, viewList):
         view_ = self.getViewByName(self.exploreSourceName, viewList)
         self.exploreSourceView = view_
-        #print(self.exploreSourceView)
         processedColumns = self.processNDTColumns(self.exploreSourceView, self.columns)
 
+    
+    def getNDTViewSQL(self):
 
-    '''
+        viewSQL = ''
 
-        dimensions_ = []
-        viewDimensions = []
-        viewMeasures = []
-        viewDimensionGroups = []
+        dimList = []
 
-        if 'dimensions' in view:
-            viewDimensions = view['dimensions']
+        for dimension in self.allDimensions:
 
-        if 'measures' in view:
-            viewMeasures = view['measures']
+            if dimension.name.upper().strip() != dimension.sql.upper().strip():
+                row = "{} AS {}".format(dimension.sql.strip(), dimension.name.upper().strip())
+                dimList.append(row)
 
-        if 'dimension_groups' in view:
-            viewDimensionGroups = view['dimension_groups']
+            else:
+                row = "{}".format(dimension.name.upper().strip())
+                dimList.append(row)
 
-        dimensions_ = Dimension().processDimensions(viewDimensions, viewMeasures, viewDimensionGroups)
+        cols =  ',\n'.join(dimList)
 
-        allDimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
+        exploreSourceSQL = self.exploreSourceView.sql
 
-    '''
+        if cols == None or cols.strip() == '':
+            cols = '*'
+
+        groupByColumnsList = []
+
+        for index in range(len(dimList)):
+            dimension_ = self.allDimensions[index]
+            if dimension_.dimensionType == 'DIMENSION':
+                groupByColumnsList.append(str(index + 1))
+
+        groupByColumns = ','.join(groupByColumnsList)
+
+        if self.viewType == 'NDT':
+            viewSQL = """
+            SELECT
+            {cols}
+            FROM ({sql})
+            GROUP BY {groupByColumns}
+            """.format(cols = cols, sql = exploreSourceSQL, groupByColumns = groupByColumns)
+
+        self.sql = viewSQL
+        print(self.sql)    
+        return viewSQL
 
 
     def setDBTModelName(self):
@@ -131,7 +153,6 @@ class View:
                         columnObj = Column()
                         columnObj.setColumn(column_, "DERIVED_COLUMN")
                         self.columns.append(columnObj)
-
             else:        
                 if 'sql' in view['derived_table']:
                     self.sql = view['derived_table']['sql']
@@ -157,11 +178,7 @@ class View:
             self.name = view['name']
 
 
-        if self.viewType == 'NDT':
-            print("NDT")
-
-
-        elif self.viewType == 'VIEW' or self.viewType == 'PDT':
+        if self.viewType == 'VIEW' or self.viewType == 'PDT' or self.viewType == 'NDT':
 
             dimensions_ = []
             viewDimensions = []
@@ -170,6 +187,7 @@ class View:
 
             if 'dimensions' in view:
                 viewDimensions = view['dimensions']
+                print(viewDimensions)
 
             if 'measures' in view:
                 viewMeasures = view['measures']
@@ -387,6 +405,8 @@ class View:
 
         if self.viewType == 'PDT':
             placeholder = 'pdt_placeholder.ddl'
+        elif self.viewType == 'NDT':
+            placeholder = 'view_placeholder.ddl'
         else:
             placeholder = 'view_placeholder.ddl'
 
@@ -394,7 +414,7 @@ class View:
         placeholder = f.read()
         dbtModelName = self.dbtModelName
 
-        fileName =  dbtModelName + '.sql'
+        fileName = dbtModelName + '.sql'
 
         filePath = "../models/" + fileName
 
@@ -408,7 +428,8 @@ class View:
                     .replace("@@ALIAS@@", self.name.lower().strip()) \
                     .replace("@@SQL@@", sql) \
                     .replace("@@PERSISTED_TYPE@@", self.persistedType) \
-                    .replace("@@PERSISTED_SQL@@", self.persistedSQL) 
+                    .replace("@@PERSISTED_SQL@@", self.persistedSQL) \
+                    .replace("@@VIEWTYPE@@", self.viewType)
 
         with open(filePath, 'w') as file:
             file.write(content)

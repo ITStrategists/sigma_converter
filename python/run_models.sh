@@ -326,3 +326,32 @@ dbt run --models sigma_its_sig_order_items
 dbt run --models sigma_its_sig_order_items
 dbt run --models sigma_its_sig_order_items
 dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_order_items
+dbt run --models 
+dbt run --models sigma_its_sig_order_items
+dbt run --models 
+dbt run --models sigma_its_sig_order_items
+dbt run --models sigma_its_sig_user_order_facts
