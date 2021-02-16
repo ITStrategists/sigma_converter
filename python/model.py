@@ -87,7 +87,8 @@ def main():
             for viewFileItem in viewFilesList:
 
                 if viewFileItem['FileName'] != 'order_items.view.lkml' and viewFileItem['FileName'] != 'user_order_facts.view.lkml':
-                    continue
+                    print('')
+                    #continue
 
                 viewFile = '{}{}'.format(viewFileItem["DirName"], viewFileItem["FileName"])
                 msg = "Parsing: {}".format(viewFile)
