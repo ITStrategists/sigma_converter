@@ -7,6 +7,7 @@ from pprint import pprint
 from pprint import pformat
 from yapf.yapflib.yapf_api import FormatCode  
 from openpyxl import Workbook
+from xlsxwriter.workbook import Workbook as ChartWorkBook
 
 logging.basicConfig(filename='data_dictionary.log',level=logging.INFO, filemode='w', format = '%(asctime)s:%(levelname)s:%(message)s')
 
@@ -40,16 +41,35 @@ total_looks = 0
 sdk = looker_sdk.init31('looker.ini')
 #----------------------------------------- Explore Model ~Start -------------------------------------------------------
 models = sdk.all_lookml_models(fields= 'name, label, project_name, allowed_db_connection_names,has_content,can, unlimited_db_connections, explores')
-ModelDictList = []
-ExploreDictList = []
-AliasesDictList = []
-SetsDictList = []
-DimensionDictList = []
-ParameterDictList = []
-JoinsDictList = []
-MeasureTypeDictList = []
-AlwaysFilterDictList = []
-FiltersDictList = []
+model_DictList = []
+explore_DictList = []
+aliases_DictList = []
+sets_DictList = []
+dimension_DictList = []
+parameter_DictList = []
+joins_DictList = []
+measure_type_DictList = []
+always_filter_DictList = []
+filters_DictList = []
+liquid_dimension_DictList = []
+view_DictList = []
+user_attr_DictList = []
+userDictList = []
+spacesDictList = []
+r_users_DictList = []
+group_DictList = []
+projects_DictList = []
+looks_DictList = []
+s_looks_DictList = []
+locales_DictList = []
+roles_DictList = []
+data_groups_DictList = []
+groups_DictList = []
+dashboardDictList = []
+conDictList = []
+dashElementDictList = []
+dash_DictList = []
+measure_DictList = []
 for model in models:
 
     if model.name == "system__activity":
@@ -58,7 +78,7 @@ for model in models:
     str_ = pformat(model)
     formatted_string = FormatCode(str_)
     #logging.info(formatted_string)
-    
+#----------------------------------------- Explore Model  ~start ---------------------------------------------------------    
     modelDic = {
         "name":model.name,
         "label":model.label,
@@ -73,10 +93,11 @@ for model in models:
         "can_update" : None if 'update' not in model.can else model.can["update"],
         "can_destroy" : None if 'destroy' not in model.can else model.can["destroy"],
     }
-    ModelDictList.append(modelDic)
+    model_DictList.append(modelDic)
 
-
-
+    total_models = total_models + 1
+        
+#----------------------------------------- explore  ~start ---------------------------------------------------------
     for explore in model.explores:
         print("Tryging ... {}:{}".format(model.name, explore.name))
         exploreObj = sdk.lookml_model_explore(lookml_model_name=model.name,explore_name=explore.name)
@@ -114,9 +135,9 @@ for model in models:
             "group_label":exploreObj.group_label,
             "tags":exploreObj.tags
         }   
-        ExploreDictList.append(exploredict)
-
-        
+        explore_DictList.append(exploredict)
+       
+        total_explores = total_explores + 1
 
         for alias in exploreObj.aliases:
             aliasesdict = {
@@ -125,8 +146,8 @@ for model in models:
                 "name":alias.name,
                 "value":alias.value,
             }
-            AliasesDictList.append(aliasesdict)
-
+            aliases_DictList.append(aliasesdict)
+#----------------------------------------- set  ~start ---------------------------------------------------------
         for set in exploreObj.sets:
             setsdict = {
                 "model_name":model.name,
@@ -134,8 +155,12 @@ for model in models:
                 "name":set.name,
                 "value":set.value,
             }
-            SetsDictList.append(setsdict)
-                
+            sets_DictList.append(setsdict)
+            total_sets = total_sets + 1
+#----------------------------------------- set ~End ---------------------------------------------------------
+
+#----------------------------------------- Dimension ~start ---------------------------------------------------------
+
         for dimension in exploreObj.fields.dimensions:
             #print(dimension)
             dimensionsdict = {
@@ -193,7 +218,37 @@ for model in models:
                 "dynamic":dimension.dynamic,
                 "week_start_day":dimension.week_start_day,
             }
-            DimensionDictList.append(dimensionsdict)
+            dimension_DictList.append(dimensionsdict)
+            total_dimensions = total_dimensions + 1
+            liquidCondition = re.search(r'\{%.*%\}', dimension.sql)        
+            if liquidCondition:
+                total_liquid_dimensions = total_liquid_dimensions + 1
+                liquid_dimension_DictList.append(dimensionsdict)  
+            liquidTemplate = re.search(r'\{\{.*\}\}', dimension.sql)        
+            if liquidTemplate:
+                total_liquid_dimensions = total_liquid_dimensions + 1
+                liquid_dimension_DictList.append(dimensionsdict) 
+#----------------------------------------- dimension  ~End ---------------------------------------------------------             
+
+#----------------------------------------- view  ~start ---------------------------------------------------------               
+        for dimension in exploreObj.fields.dimensions: 
+            viewsdict = {
+                "model_name":model.name,
+                "explore_id":exploreObj.id,
+                "view_name" :dimension.source_file_path,
+            }
+            view_DictList.append(viewsdict)
+            total_views = total_views + 1
+#----------------------------------------- view  ~End ---------------------------------------------------------
+        for dimension in exploreObj.fields.dimensions :
+            measuredict = {
+                "model_name": model.name,
+                "explore_id":exploreObj.id,
+                "measure":dimension.measure,
+            }
+            measure_DictList.append(measuredict)
+            total_measures = total_measures + 1
+#----------------------------------------- always filter  ~start ---------------------------------------------------------
         for always_filter_item in exploreObj.always_filter:
             alwaysfilterdict = {
                 "model_name":model.name,
@@ -201,9 +256,13 @@ for model in models:
                 "name":always_filter_item.name,
                 "value":always_filter_item.value,
             }
-            AlwaysFilterDictList.append(alwaysfilterdict)
+            always_filter_DictList.append(alwaysfilterdict)
+            
+            total_always_filter = total_always_filter + 1
+#----------------------------------------- always filter  ~End ---------------------------------------------------------
+        #logging.info(exploreObj.fields.filters)
 
-        logging.info(exploreObj.fields.filters)
+#----------------------------------------- filters ~start ---------------------------------------------------------
         for filter in exploreObj.fields.filters:
             filterdict = {
                "model_name":model.name,
@@ -258,7 +317,11 @@ for model in models:
                 "dynamic":filter.dynamic,
                 "week_start_day":filter.week_start_day,
             }
-            FiltersDictList.append(filterdict)
+            filters_DictList.append(filterdict)
+            total_filteres = total_filteres + 1 
+ #----------------------------------------- filters  ~End ---------------------------------------------------------               
+ 
+ #----------------------------------------- parameter  ~start ---------------------------------------------------------
         for parameter in exploreObj.fields.parameters:
             #print(parameter)
             parametersdict = {
@@ -316,7 +379,12 @@ for model in models:
                 "dynamic":parameter.dynamic,
                 "week_start_day":parameter.week_start_day,
             }
-            ParameterDictList.append(parametersdict)
+            parameter_DictList.append(parametersdict)
+
+#----------------------------------------- parameter  ~End ---------------------------------------------------------
+
+
+#----------------------------------------- join  ~start ---------------------------------------------------------
         for join in exploreObj.joins:
             joinsdict =   {
                 "model_name":model.name,
@@ -335,17 +403,19 @@ for model in models:
                 "type":join.type,
                 "view_label":join.view_label,
             }
-            JoinsDictList.append(joinsdict)
+            joins_DictList.append(joinsdict)
         for supported_measure_type in exploreObj.supported_measure_types:
             measuretypesdict =    {
                 "measure_types":supported_measure_type.measure_types,
             }
-            MeasureTypeDictList.append(measuretypesdict)
+            measure_type_DictList.append(measuretypesdict)
+
+#----------------------------------------- join  ~End ---------------------------------------------------------            
+
 #----------------------------------------- Explore Model ~End -------------------------------------------------------
 
 #-----------------------------------------Single Dashboard  ~Start -------------------------------------------------------
 
-dash_DictList = []
 s_dashboard = sdk.all_dashboards()
 
 for dash in s_dashboard:
@@ -445,7 +515,6 @@ for dash in s_dashboard:
 #-----------------------------------------Single Dashboard  ~End ---------------------------------------------------------
 #----------------------------------------- Dashboard Element ~Start -------------------------------------------------------
 
-dashElementDictList = []
 s_dashboard = sdk.all_dashboards()
 
 for dash in s_dashboard:
@@ -583,8 +652,9 @@ for dash in s_dashboard:
 
 
          }
-    dashElementDictList.append(data_groupsDict)
-
+        dashElementDictList.append(data_groupsDict)
+        total_dashboard_elements = total_dashboard_elements + 1
+        total_dynamic_fields = total_dynamic_fields + 1
 
 #print(dash_element_DataFrame)
 #----------------------------------------- Dashboard Element ~End ---------------------------------------------------------
@@ -592,7 +662,7 @@ for dash in s_dashboard:
 #----------------------------------------- Connection  ~Start ---------------------------------------------------------
 
 con = sdk.all_connections()
-conDictList = []
+
 for cItem in con:
     conDict = {
         "name" : cItem.name,
@@ -666,7 +736,6 @@ for cItem in con:
 #df = pd.DataFrame(conDictList)
 #df.to_csv("connections.csv")
 
-dashboardDictList = []
 dashboards = sdk.dashboard(dashboard_id="1")
 #logging.info(dashboards)
 
@@ -762,6 +831,8 @@ for dashboard in dashboards:
         "space_can_is_users_root" : None if 'is_users_root' not in dashboard.space.can else dashboard.space.can["is_users_root"],
     }
     dashboardDictList.append(dashboardDict)
+    total_dashboards = total_dashboards + 1
+    
 
 #----------------------------------------- All Dashboard  ~End ---------------------------------------------------------
 
@@ -770,7 +841,7 @@ for dashboard in dashboards:
 
 
 ########################################################################################################
-models = sdk.all_lookml_models(fields= 'name, label, project_name, allowed_db_connection_names,has_content,can, unlimited_db_connections, explores')
+'''models = sdk.all_lookml_models(fields= 'name, label, project_name, allowed_db_connection_names,has_content,can, unlimited_db_connections, explores')
 for model in models:
     logging.info(model.name)
     if model.name == 'system__activity':
@@ -800,7 +871,7 @@ for model in models:
             explore_name=explore.name
         )
         dim_list = []
-        
+        liquid_dim_list = []
         for dimension in exploreObj.fields.dimensions:
             dim_def = {
                 "name":dimension.name,
@@ -816,6 +887,9 @@ for model in models:
       
 
         dimensions = json.dumps(dim_list)
+            
+            
+
 ################################################################################################################
 
 
@@ -835,10 +909,9 @@ for dimension in dim_list:
     }
     dimension_DictList.append(dimensionDict)
 #-----------------------------------------All Dimensions ~End ---------------------------------------------------------
-
+'''
 #-----------------------------------------Single Group Users ~Start -------------------------------------------------------
 
-groups_DictList = []
 groups = sdk.all_groups()
 
 
@@ -906,14 +979,13 @@ for group in groups:
         }
           
     groups_DictList.append(groupsDict)
-
-
+    total_users_in_groups = total_users_in_groups + 1
+ 
 #print(user_groups_DataFrame)
 
 #-----------------------------------------Single Group Users ~End ---------------------------------------------------------
 #-----------------------------------------All Data Groups ~Start -------------------------------------------------------
 
-data_groups_DictList = []
 data_groups = sdk.all_datagroups()
 
 for data_group in data_groups:
@@ -935,11 +1007,13 @@ for data_group in data_groups:
 
     }
     data_groups_DictList.append(data_groupsDict)
+    
+    total_datagroups = total_datagroups + 1
+    
 #-----------------------------------------All Data Groups ~End -------------------------------------------------------
 
 #-----------------------------------------All Roles ~Start -------------------------------------------------------
 
-roles_DictList = []
 roles = sdk.all_roles()
 for role in roles:
     roleDict = {
@@ -956,7 +1030,6 @@ for role in roles:
 
         "permission_set_all_access" : role.permission_set.all_access,
         "permission_set_built_in" : role.permission_set.built_in,
-        "permission_set_id" : role.permission_set.id,
         "permission_set_name" : role.permission_set.name,
         "permission_set_permissions" : role.permission_set.permissions,
         "permission_set_url" : role.permission_set.url,
@@ -980,8 +1053,8 @@ for role in roles:
 
     }
     roles_DictList.append(roleDict)
-
-roles_DataFrame = pd.DataFrame(roles_DictList)
+    total_roles = total_roles + 1
+#roles_DataFrame = pd.DataFrame(roles_DictList)
 #print(roles_DataFrame)
 
 #-----------------------------------------All Roles ~End ---------------------------------------------------------
@@ -991,7 +1064,6 @@ roles_DataFrame = pd.DataFrame(roles_DictList)
 #-----------------------------------------All Locales ~Start -------------------------------------------------------
 
 
-locales_DictList = []
 locales = sdk.all_locales()
 
 for locale in locales:
@@ -1004,7 +1076,8 @@ for locale in locales:
     }
     locales_DictList.append(localeDict)
 
-
+    total_locales = total_locales + 1
+    
 #print(locales_DataFrame)
 
 #-----------------------------------------All Locales ~End ---------------------------------------------------------
@@ -1014,7 +1087,6 @@ for locale in locales:
 
 #-----------------------------------------Single Look ~Start -------------------------------------------------------
 
-s_looks_DictList = []
 looks = sdk.all_looks()
 for look in looks:
     s_look = sdk.look(look_id= look.id)
@@ -1207,7 +1279,7 @@ for look in looks:
 
     }
     s_looks_DictList.append(look_Dict)
-
+    
 
 #print(s_looks_DataFrame)
 
@@ -1215,7 +1287,6 @@ for look in looks:
 
 #-----------------------------------------All looks ~Start -------------------------------------------------------
 
-looks_DictList = []
 looks = sdk.all_looks()
 for look in looks:
     looks_Dict = {
@@ -1291,7 +1362,7 @@ for look in looks:
         "look_user_id" : look.user_id,
         "look_view_count" : look.view_count,
         "look_user" : look.user,
-        "look_space_id" : look.space_id,
+        
 '''
         #"look_space_certificate" : look.space.certificate,
         "look_space_file_type" : look.space.file_type,
@@ -1320,8 +1391,8 @@ for look in looks:
 
     }
     looks_DictList.append(looks_Dict)
-
-
+    total_looks = total_looks + 1
+           
 #print(looks_DataFrame)
 
 #-----------------------------------------All looks ~End ---------------------------------------------------------
@@ -1330,7 +1401,6 @@ for look in looks:
 
 #-----------------------------------------All Projects ~Start -------------------------------------------------------
 
-projects_DictList = []
 projects = sdk.all_projects()
 for project in projects:
     projectsDict = {
@@ -1357,14 +1427,14 @@ for project in projects:
         "project_is_example" : project.is_example,
     }
     projects_DictList.append(projectsDict)
-
+ 
+    total_projects = total_projects + 1
 #print(projects_DataFrame)
 
 #-----------------------------------------All Projects ~End ---------------------------------------------------------
 
 #-----------------------------------------All Group ~Start -------------------------------------------------------
 
-group_DictList = []
 groups = sdk.all_groups()
 for group in groups:
     groupDict = {
@@ -1376,7 +1446,7 @@ for group in groups:
         "group_can_edit_in_ui" : None if 'edit_in_ui' not in group.can else group.can["edit_in_ui"],
         "group_can_add_to_content_metadata" : None if 'add_to_content_metadata' not in group.can else group.can["add_to_content_metadata"],
 
-        "group_can_add_to_content_metadata" : group.can_add_to_content_metadata,
+        
         "group_contains_current_user" : group.contains_current_user,
         "group_external_group_id" : group.external_group_id,
         "group_externally_managed" : group.externally_managed,
@@ -1387,7 +1457,8 @@ for group in groups:
     }
     group_DictList.append(groupDict)
 
-
+    total_groups = total_groups + 1
+       
 #print(group_DataFrame)
 
 #-----------------------------------------All Group ~End ---------------------------------------------------------
@@ -1398,7 +1469,6 @@ for group in groups:
 #-----------------------------------------Single Role Users ~Start -------------------------------------------------------
 
 
-r_users_DictList = []
 role_users = sdk.role_users(role_id=2)
 for user in role_users:
     roles_Dict = {
@@ -1446,7 +1516,7 @@ for user in role_users:
         "user_url" : user.url,
     }
     r_users_DictList.append(roles_Dict)
-
+ 
 #print(roles_DataFrame)
 
 #-----------------------------------------Single Role Users ~End ---------------------------------------------------------
@@ -1454,7 +1524,6 @@ for user in role_users:
 
 #-----------------------------------------All Spaces -Start --------------------------------------------------------
 
-spacesDictList = []
 spaces = sdk.all_spaces()
 
 for space in spaces:
@@ -1485,7 +1554,7 @@ for space in spaces:
         "space_can_edit_content" : None if 'edit_content' not in space.can else space.can["edit_content"],
     }
     spacesDictList.append(userDict)
-
+    total_spaces = total_spaces + 1
 #print(spacesDataFrame)
 
 #-----------------------------------------All Spaces -End ----------------------------------------------------------
@@ -1493,7 +1562,7 @@ for space in spaces:
 
 #-----------------------------------------All User Attributes ~Start -----------------------------------------------
 
-user_attr_DictList = []
+
 user_attributes = sdk.all_user_attributes()
 for user_attribute in user_attributes:
     userDict = {
@@ -1516,7 +1585,7 @@ for user_attribute in user_attributes:
 
     }
     user_attr_DictList.append(userDict)
-
+    total_user_attributes = total_user_attributes + 1
 
 #print(user_attr_DataFrame)
 
@@ -1525,7 +1594,7 @@ for user_attribute in user_attributes:
 #--------------------------------------------All Users-Start---#-----------------------------------------
 
 
-userDictList = []
+
 users = sdk.all_users()
 for user in users:
     userDict = {
@@ -1588,80 +1657,24 @@ for user in users:
        
     }
     userDictList.append(userDict)
-
+  
+    total_users = total_users + 1
 
 #print(userDataFrame)
+
+
 
 
 #########################################--All Users-End--##################################
 
 
 
-modelDict = pd.DataFrame(ModelDictList)
-exploreDict = pd.DataFrame(ExploreDictList)
-aliasesDict = pd.DataFrame(AliasesDictList)
-setsDict = pd.DataFrame(SetsDictList)
-dimensionDict = pd.DataFrame(DimensionDictList)
-parameterDict = pd.DataFrame(ParameterDictList)
-joinDict = pd.DataFrame(JoinsDictList)
-measureTypeList = pd.DataFrame(MeasureTypeDictList)
-filterDict = pd.DataFrame(FiltersDictList)
-alwaysFilterDict = pd.DataFrame(AlwaysFilterDictList)
-connectionList = pd.DataFrame(conDictList) 
-allDashboardList = pd.DataFrame(dashboardDictList)
-dashboardList = pd.DataFrame(dash_DictList)
-dashelementList = pd.DataFrame(dashElementDictList)
-dimlist = pd.DataFrame(dim_list)
-dimensionList = pd.DataFrame(dimension_DictList)
-groupUserList = pd.DataFrame(groups_DictList)
-datagroupsList = pd.DataFrame(data_groups_DictList)
-rolesList = pd.DataFrame(roles_DictList)
-localesList = pd.DataFrame(locales_DictList)
-singlelooksList = pd.DataFrame(s_looks_DictList)
-looksList = pd.DataFrame(looks_DictList)
-projectsList = pd.DataFrame(projects_DictList)
-allGroupsList = pd.DataFrame(group_DictList)
-singleRoleUserList = pd.DataFrame(r_users_DictList)
-spacesList = pd.DataFrame(spacesDictList)
-userAttributeList = pd.DataFrame(user_attr_DictList)
-userList = pd.DataFrame(userDictList)
-with pd.ExcelWriter('data_dictionary.xlsx') as writer: 
-
-    projectsList.to_excel(writer,sheet_name='projects')
-    looksList.to_excel(writer,sheet_name='Looks')
-    modelDict.to_excel(writer,sheet_name='models')
-    allGroupsList.to_excel(writer,sheet_name='all_groups')
-    userList.to_excel(writer,sheet_name='all_users')
-    singleRoleUserList.to_excel(writer,sheet_name='single_user')
-    spacesList.to_excel(writer,sheet_name='spaces')
-    userAttributeList.to_excel(writer,sheet_name='user_attribute')
-    exploreDict.to_excel(writer,sheet_name='explore')
-    aliasesDict.to_excel(writer,sheet_name='aliases')
-    setsDict.to_excel(writer,sheet_name='sets')
-    dimensionDict.to_excel(writer,sheet_name='dimension')
-    parameterDict.to_excel(writer,sheet_name='parameter')
-    joinDict.to_excel(writer,sheet_name='joins')
-    measureTypeList.to_excel(writer,sheet_name='measure_type')
-    filterDict.to_excel(writer,sheet_name='filters')
-    alwaysFilterDict.to_excel(writer,sheet_name='always_filter')
-    allDashboardList.to_excel(writer,sheet_name='all_Dashboards')
-    dashboardList.to_excel(writer,sheet_name='dashboard')
-    dashelementList.to_excel(writer,sheet_name='dashboard_element')
-    connectionList.to_excel(writer,sheet_name='connections')
-    dimlist.to_excel(writer,sheet_name='dim_list')
-    dimensionList.to_excel(writer,sheet_name='dimension_List')
-    datagroupsList.to_excel(writer,sheet_name='all_data_groups')
-    groupUserList.to_excel(writer,sheet_name='single_group_User')
-    rolesList.to_excel(writer,sheet_name='roles')
-    localesList.to_excel(writer,sheet_name='locales')
-    singlelooksList.to_excel(writer,sheet_name='single_look')
-
 ''' 
     dashboard_elements = sdk.dashboard_dashboard_elements(dashboard_id = dashboard.id)
 
 dash1 = sdk.all_dashboards()
 for q in dash1:
-    total_dashboards = total_dashboards + 1
+   
     can = q.can
     content_favorite_id = q.content_favorite_id
     description = q.description
@@ -1709,7 +1722,7 @@ for q in dash1:
     #logging.info(dash_element)
 
     for element in dash_element:
-        total_dashboard_elements = total_dashboard_elements + 1
+      #  total_dashboard_elements = total_dashboard_elements + 1
 
 a_looks = sdk.all_looks()
 #logging.info(a_looks)
@@ -1717,45 +1730,45 @@ for a in a_looks:
     total_looks = total_looks + 1
     look = sdk.look(look_id = a.id)
     if look.query.dynamic_fields is not None:
-        total_dynamic_fields = total_dynamic_fields + 1
+      
 
 all_user_attributes = sdk.all_user_attributes()
 print(all_user_attributes)
 for user_attribute in all_user_attributes:
     print(user_attribute)
-    total_user_attributes = total_user_attributes + 1
+   
 
 all_roles = sdk.all_roles()
 print(all_roles)
 for role in all_roles:
-    total_roles = total_roles + 1
+    
 
 all_users = sdk.all_users()
 #print(all_users)
 for user in all_users:
     print(user)
-    total_users = total_users + 1
+    
 
 g_group = sdk.all_groups()
 print(g_group)
 for group in g_group:
     groupId = group.id
-    total_groups = total_groups + 1
+
     group_users = sdk.all_group_users(group_id=groupId)
     for group_user in group_users:
         print(group_user)
-        total_users_in_groups = total_users_in_groups + 1
+           
 
 data_groups = sdk.all_datagroups()
 for data_group in data_groups:
-    total_datagroups = total_datagroups + 1
+
     print(data_group.id)
 
 models = sdk.all_lookml_models(fields= 'name, label, project_name, allowed_db_connection_names,has_content,can, unlimited_db_connections, explores')
 for model in models:
     if model.name == 'system__activity':
         continue
-    total_models = total_models + 1
+         
     name = model.name
     label = model.label
     project_name = model.project_name
@@ -1777,7 +1790,7 @@ for model in models:
             lookml_model_name=model.name,
             explore_name=explore.name
         )
-        total_explores = total_explores + 1
+       
 
         logging.info(exploreObj)
 
@@ -1793,26 +1806,18 @@ for model in models:
                 "sql": dimension.sql,
                 "label_short":dimension.label_short,
             }
-            total_dimensions = total_dimensions + 1
+           
 
             views.append(dimension.source_file_path)
 
-            liquidCondition = re.search(r'\{%.*%\}', dimension.sql)        
-            if liquidCondition:
-                total_liquid_dimensions = total_liquid_dimensions + 1
-
-
-            liquidTemplate = re.search(r'\{\{.*\}\}', dimension.sql)        
-            if liquidTemplate:
-                total_liquid_dimensions = total_liquid_dimensions + 1
-
+            
 
         e_measure = exploreObj.fields.measures
         for q in e_measure:
             print("\n")
             for x,y in q.items():
                 print("{} : {}".format(x,y))
-                total_measures = total_measures + 1 
+                
 
         s = exploreObj.sets
 
@@ -1821,21 +1826,13 @@ for model in models:
             print(s)
             for t in q:
                 print(t)
-                total_sets = total_sets + 1
+                
 
         if exploreObj.always_filter != []:
-            total_always_filter = total_always_filter + 1
+             
 
 
-a_locales = sdk.all_locales()
-for locale in a_locales:
-    total_locales = total_locales + 1
 
-
-a_project = sdk.all_projects()
-
-for project in a_project:
-    total_projects = total_projects + 1
 
 distinct_views = []
 
@@ -1846,71 +1843,169 @@ for viewItem in views:
             found = True
     if found == False:
         distinct_views.append(viewItem) 
-'''
 
-a_space = sdk.all_spaces()
-for space in a_space:
-    total_spaces = total_spaces + 1
+
+    
+'''
 
 
 
 stats = []
-stats.append(['Artifact Name', 'Count'])
-stats.append(['All Projects', str(total_projects)])
-stats.append(['All Spaces', str(total_spaces)])
-stats.append(['Total Models', str(total_models)])
-stats.append(['Total Explores', str(total_explores)])
-stats.append(['Total Dimensions', str(total_dimensions)])
-stats.append(['Total Liquid Dimensions', str(total_liquid_dimensions)])
-stats.append(['Total Measures', str(total_measures)])
-stats.append(['Total Sets', str(total_sets)])
-stats.append(['Total Connections', str(total_connections)])
-stats.append(['Total Looks', str(total_looks)])
-stats.append(['Total Look Dynamic Fields', str(total_dynamic_fields)])
-stats.append(['Total Dashboards', str(total_dashboards)])
-stats.append(['Total Dashboards Elements', str(total_dashboard_elements)])
-stats.append(['Total DataGroups', str(total_datagroups)])
-stats.append(['Total Groups', str(total_groups)])
-stats.append(['Total Users in all groups', str(total_users_in_groups)])
-stats.append(['Total Users', str(total_users)])
-stats.append(['Total Roles', str(total_roles)])
-stats.append(['Total User Attributes', str(total_user_attributes)])
-stats.append(['Total Views', str(len(distinct_views))])
-stats.append(['Total Always Filters', str(total_always_filter)])
-stats.append(['All Locales', str(total_locales)])
+stats.append(['Artifact Name',                  'Count',                        'complexity'    ])
+stats.append(['All Projects',               	(total_projects),                1           ])
+stats.append(['All Spaces',                 	(total_spaces),                  1           ])
+stats.append(['Total Models',               	(total_models),                  1           ])
+stats.append(['Total Explores',             	(total_explores),                5           ])
+stats.append(['Total Dimensions',           	(total_dimensions),				2			])
+stats.append(['Total Liquid Dimensions',        (total_liquid_dimensions),		10			])
+stats.append(['Total Measures', 				(total_measures),				7			])
+stats.append(['Total Sets', 					(total_sets),					0			])
+stats.append(['Total Connections', 				(total_connections),				0			])
+stats.append(['Total Looks', 					(total_looks),					8			])
+stats.append(['Total Look Dynamic Fields', 		(total_dynamic_fields),			10			])
+stats.append(['Total Dashboards', 				(total_dashboards),				9			])
+stats.append(['Total Dashboards Elements', 		(total_dashboard_elements),		9			])
+stats.append(['Total DataGroups', 				(total_datagroups),				2			])
+stats.append(['Total Groups', 					(total_groups),					2			])
+stats.append(['Total Users in all groups', 		(total_users_in_groups),			2			])
+stats.append(['Total Users', 					(total_users),					2			])
+stats.append(['Total Roles', 					(total_roles),					2			])
+stats.append(['Total User Attributes', 			(total_user_attributes),			10			])
+stats.append(['Total Views', 					(len(distinct_views)),			2			])
+stats.append(['Total Always Filters', 			(total_always_filter),			2			])
+stats.append(['All Locales', 					(total_locales),					2			])
 
-effort_types = []
-effort_types.append(['Artifact Name', 'Complexity'])
-effort_types.append(['All Projects', 1])
-effort_types.append(['All Spaces', 1])
-effort_types.append(['Total Models', 1])
-effort_types.append(['Total Explores', 5])
-effort_types.append(['Total Dimensions', 2])
-effort_types.append(['Total Liquid Dimensions', 10])
-effort_types.append(['Total Measures', 7])
-effort_types.append(['Total Sets', 0])
-effort_types.append(['Total Connections', 0])
-effort_types.append(['Total Looks', 8])
-effort_types.append(['Total Look Dynamic Fields', 10])
-effort_types.append(['Total Dashboards', 9])
-effort_types.append(['Total Dashboards Elements', 9])
-effort_types.append(['Total DataGroups', 2])
-effort_types.append(['Total Groups', 2])
-effort_types.append(['Total Users in all groups', 2])
-effort_types.append(['Total Users', 2])
-effort_types.append(['Total Roles', 2])
-effort_types.append(['Total User Attributes', 10])
-effort_types.append(['Total Views', 2])
-effort_types.append(['Total Always Filters', 2])
-effort_types.append(['All Locales', 2])
+path = 'data_dictionary.xlsx'
+n = stats
+i = 0
+m = []
+for i in range(0, len(n)- 1):
+    if i > 0:
+        m.append(n[i]) 
+#for row in m :
 
-new_stats = []
-for i in range(0, len(effort_types) - 1):
-    new_stats.append([str(stats[i][0]), str(stats[i][1]), str(effort_types[i][1])])
-print(new_stats)
-content = ''
-for item in new_stats:
-    content = content + '{},{},{}\n'.format(item[0], item[1], item[2]) 
-f = open('data_dictionary_stats.csv', 'w+')
-f.write(content)
+    #print(row)
+rez = [[m[j][i] for j in range(len(m))] for i in range(len(m[0]))]
+print("\n")
 
+workbook  = ChartWorkBook(path)
+worksheet = workbook.add_worksheet()
+
+# Add a format for the headings.
+bold = workbook.add_format({'bold': True})
+
+# Add the worksheet data that the charts will refer to.
+#["Art", "Projects", "Models"],
+headings = ['Artifacts', 'Count', 'Complexity']
+
+
+data = rez
+
+worksheet.write_row('A1', headings, bold)
+worksheet.write_column('A2', data[0])
+worksheet.write_column('B2', data[1])
+worksheet.write_column('C2', data[2])
+
+# Create a new column chart. This will use this as the primary chart.
+column_chart2 = workbook.add_chart({'type': 'column'})
+
+# Configure the data series for the primary chart.
+column_chart2.add_series({
+    'name':       '=Sheet1!$B$1',
+    'categories': '=Sheet1!$A$2:$A$22',
+    'values':     '=Sheet1!$B$2:$B$22',
+})
+
+# Create a new column chart. This will use this as the secondary chart.
+line_chart2 = workbook.add_chart({'type': 'line'})
+
+# Configure the data series for the secondary chart. We also set a
+# secondary Y axis via (y2_axis). This is the only difference between
+# this and the first example, apart from the axis label below.
+line_chart2.add_series({
+    'name':       '=Sheet1!$C$1',
+    'categories': '=Sheet1!$A$2:$A$22',
+    'values':     '=Sheet1!$C$2:$C$22',
+    'y2_axis':    True,
+})
+
+# Combine the charts.
+column_chart2.combine(line_chart2)
+
+# Add a chart title and some axis labels.
+column_chart2.set_title({  'name': 'Looker Sigma Complexity'})
+column_chart2.set_x_axis({ 'name': 'Artifacts'})
+column_chart2.set_y_axis({ 'name': 'Counts'})
+
+column_chart2.set_size({'width': 900, 'height': 500})
+# Note: the y2 properties are on the secondary chart.
+line_chart2.set_y2_axis({'name': 'Complexity'})
+
+# Insert the chart into the worksheet
+worksheet.insert_chart('F1', column_chart2)
+
+workbook.close()
+
+modelDict = pd.DataFrame(model_DictList)
+exploreDict = pd.DataFrame(explore_DictList)
+aliasesDict = pd.DataFrame(aliases_DictList)
+setsDict = pd.DataFrame(sets_DictList)
+dimensionDict = pd.DataFrame(dimension_DictList)
+parameterDict = pd.DataFrame(parameter_DictList)
+joinDict = pd.DataFrame(joins_DictList)
+measureTypeList = pd.DataFrame(measure_type_DictList)
+filterDict = pd.DataFrame(filters_DictList)
+alwaysFilterDict = pd.DataFrame(always_filter_DictList)
+connectionList = pd.DataFrame(conDictList) 
+allDashboardList = pd.DataFrame(dashboardDictList)
+dashboardList = pd.DataFrame(dash_DictList)
+dashelementList = pd.DataFrame(dashElementDictList)
+dimensionList = pd.DataFrame(dimension_DictList)
+liquidDimensionList = pd.DataFrame(liquid_dimension_DictList)
+groupUserList = pd.DataFrame(groups_DictList)
+datagroupsList = pd.DataFrame(data_groups_DictList)
+rolesList = pd.DataFrame(roles_DictList)
+localesList = pd.DataFrame(locales_DictList)
+singlelooksList = pd.DataFrame(s_looks_DictList)
+looksList = pd.DataFrame(looks_DictList)
+projectsList = pd.DataFrame(projects_DictList)
+allGroupsList = pd.DataFrame(group_DictList)
+singleRoleUserList = pd.DataFrame(r_users_DictList)
+spacesList = pd.DataFrame(spacesDictList)
+userAttributeList = pd.DataFrame(user_attr_DictList)
+userList = pd.DataFrame(userDictList)
+viewsList = pd.DataFrame(view_DictList)
+measureList = pd.DataFrame(measure_DictList)
+
+
+with pd.ExcelWriter(path) as writer :
+    projectsList.to_excel(writer,sheet_name='projects')
+    looksList.to_excel(writer,sheet_name='Looks')
+    modelDict.to_excel(writer,sheet_name='models')
+    allGroupsList.to_excel(writer,sheet_name='all_groups')
+    userList.to_excel(writer,sheet_name='all_users')
+    singleRoleUserList.to_excel(writer,sheet_name='single_user')
+    spacesList.to_excel(writer,sheet_name='spaces')
+    userAttributeList.to_excel(writer,sheet_name='user_attribute')
+    exploreDict.to_excel(writer,sheet_name='explore')
+    aliasesDict.to_excel(writer,sheet_name='aliases')
+    setsDict.to_excel(writer,sheet_name='sets')
+    dimensionDict.to_excel(writer,sheet_name='dimension')
+    liquidDimensionList.to_excel(writer,sheet_name='liquid_dimension')
+    parameterDict.to_excel(writer,sheet_name='parameter')
+    joinDict.to_excel(writer,sheet_name='joins')
+    measureTypeList.to_excel(writer,sheet_name='measure_type')
+    filterDict.to_excel(writer,sheet_name='filters')
+    alwaysFilterDict.to_excel(writer,sheet_name='always_filter')
+    allDashboardList.to_excel(writer,sheet_name='all_Dashboards')
+    dashboardList.to_excel(writer,sheet_name='dashboard')
+    dashelementList.to_excel(writer,sheet_name='dashboard_element')
+    connectionList.to_excel(writer,sheet_name='connections')
+    dimensionList.to_excel(writer,sheet_name='dimension_List')
+    datagroupsList.to_excel(writer,sheet_name='all_data_groups')
+    groupUserList.to_excel(writer,sheet_name='single_group_User')
+    rolesList.to_excel(writer,sheet_name='roles')
+    localesList.to_excel(writer,sheet_name='locales')
+    singlelooksList.to_excel(writer,sheet_name='single_look')
+    viewsList.to_excel(writer,sheet_name='views')
+    measureList.to_excel(writer,sheet_name="measure")
