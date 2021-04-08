@@ -3,11 +3,7 @@ import logging
 import json
 import re
 import pandas as pd
-from pprint import pprint
-from pprint import pformat
-from yapf.yapflib.yapf_api import FormatCode  
-from openpyxl import Workbook
-from xlsxwriter.workbook import Workbook as ChartWorkBook
+
 
 logging.basicConfig(filename='data_dictionary.log',level=logging.INFO, filemode='w', format = '%(asctime)s:%(levelname)s:%(message)s')
 
@@ -37,6 +33,7 @@ total_liquid_dimensions = 0
 total_dashboard_elements = 0
 total_dynamic_fields = 0
 total_looks = 0
+total_aliases = 0
 
 sdk = looker_sdk.init31('looker.ini')
 #----------------------------------------- Explore Model ~Start -------------------------------------------------------
@@ -75,8 +72,8 @@ for model in models:
     if model.name == "system__activity":
         continue
 
-    str_ = pformat(model)
-    formatted_string = FormatCode(str_)
+    #str_ = pformat(model)
+    #formatted_string = FormatCode(str_)
     #logging.info(formatted_string)
 #----------------------------------------- Explore Model  ~start ---------------------------------------------------------    
     modelDic = {
@@ -101,11 +98,6 @@ for model in models:
     for explore in model.explores:
         print("Tryging ... {}:{}".format(model.name, explore.name))
         exploreObj = sdk.lookml_model_explore(lookml_model_name=model.name,explore_name=explore.name)
-        exploreStr = pformat(str(exploreObj))
-        exploreFormattedString = FormatCode(exploreStr)
-        #logging.info(exploreFormattedString)
-        #logging.info(exploreObj)
-
         print(exploreObj.id)
         exploreObj.aliases
         exploredict = {   
@@ -147,6 +139,7 @@ for model in models:
                 "value":alias.value,
             }
             aliases_DictList.append(aliasesdict)
+            total_aliases = total_aliases + 1
 #----------------------------------------- set  ~start ---------------------------------------------------------
         for set in exploreObj.sets:
             setsdict = {
@@ -227,7 +220,10 @@ for model in models:
             liquidTemplate = re.search(r'\{\{.*\}\}', dimension.sql)        
             if liquidTemplate:
                 total_liquid_dimensions = total_liquid_dimensions + 1
-                liquid_dimension_DictList.append(dimensionsdict) 
+                liquid_dimension_DictList.append(dimensionsdict)
+            if dimension.measure == True:
+                measure_DictList.append(dimensionsdict)
+                total_measures = total_measures + 1 
 #----------------------------------------- dimension  ~End ---------------------------------------------------------             
 
 #----------------------------------------- view  ~start ---------------------------------------------------------               
@@ -240,14 +236,7 @@ for model in models:
             view_DictList.append(viewsdict)
             total_views = total_views + 1
 #----------------------------------------- view  ~End ---------------------------------------------------------
-        for dimension in exploreObj.fields.dimensions :
-            measuredict = {
-                "model_name": model.name,
-                "explore_id":exploreObj.id,
-                "measure":dimension.measure,
-            }
-            measure_DictList.append(measuredict)
-            total_measures = total_measures + 1
+
 #----------------------------------------- always filter  ~start ---------------------------------------------------------
         for always_filter_item in exploreObj.always_filter:
             alwaysfilterdict = {
@@ -503,10 +492,7 @@ for dash in s_dashboard:
         "background_color" : dashboard.background_color,
         "created_at" : str(dashboard.created_at),
         "crossfilter_enabled" : dashboard.crossfilter_enabled,
-
-       
-         
-                }
+    }
     dash_DictList.append(dash_Dict)
 
 
@@ -1876,6 +1862,7 @@ stats.append(['Total Always Filters', 			(total_always_filter),			2			])
 stats.append(['All Locales', 					(total_locales),					2			])
 
 path = 'data_dictionary.xlsx'
+
 n = stats
 i = 0
 m = []
@@ -1888,8 +1875,24 @@ for i in range(0, len(n)- 1):
 rez = [[m[j][i] for j in range(len(m))] for i in range(len(m[0]))]
 print("\n")
 
-workbook  = ChartWorkBook(path)
-worksheet = workbook.add_worksheet()
+
+writer = pd.ExcelWriter(path, engine='xlsxwriter')
+
+# Create a Pandas dataframe from the data.
+#df = pd.DataFrame({'': []})
+
+# Convert the dataframe to an XlsxWriter Excel object.
+#df.to_excel(writer, sheet_name='Stats')
+
+df = pd.DataFrame({'': []})
+
+workbook  = writer.book
+
+df.to_excel(writer, sheet_name='Sheet1')
+
+worksheet = writer.sheets['Sheet1']
+worksheet.name = "Stats"
+
 
 # Add a format for the headings.
 bold = workbook.add_format({'bold': True})
@@ -1911,9 +1914,9 @@ column_chart2 = workbook.add_chart({'type': 'column'})
 
 # Configure the data series for the primary chart.
 column_chart2.add_series({
-    'name':       '=Sheet1!$B$1',
-    'categories': '=Sheet1!$A$2:$A$22',
-    'values':     '=Sheet1!$B$2:$B$22',
+    'name':       '=Stats!$B$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$B$2:$B$22',
 })
 
 # Create a new column chart. This will use this as the secondary chart.
@@ -1923,9 +1926,9 @@ line_chart2 = workbook.add_chart({'type': 'line'})
 # secondary Y axis via (y2_axis). This is the only difference between
 # this and the first example, apart from the axis label below.
 line_chart2.add_series({
-    'name':       '=Sheet1!$C$1',
-    'categories': '=Sheet1!$A$2:$A$22',
-    'values':     '=Sheet1!$C$2:$C$22',
+    'name':       '=Stats!$C$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$C$2:$C$22',
     'y2_axis':    True,
 })
 
@@ -1944,7 +1947,11 @@ line_chart2.set_y2_axis({'name': 'Complexity'})
 # Insert the chart into the worksheet
 worksheet.insert_chart('F1', column_chart2)
 
-workbook.close()
+
+df = pd.DataFrame(stats)
+df.to_excel(writer, sheet_name = "Data")
+
+
 
 modelDict = pd.DataFrame(model_DictList)
 exploreDict = pd.DataFrame(explore_DictList)
@@ -1978,34 +1985,35 @@ viewsList = pd.DataFrame(view_DictList)
 measureList = pd.DataFrame(measure_DictList)
 
 
-with pd.ExcelWriter(path) as writer :
-    projectsList.to_excel(writer,sheet_name='projects')
-    looksList.to_excel(writer,sheet_name='Looks')
-    modelDict.to_excel(writer,sheet_name='models')
-    allGroupsList.to_excel(writer,sheet_name='all_groups')
-    userList.to_excel(writer,sheet_name='all_users')
-    singleRoleUserList.to_excel(writer,sheet_name='single_user')
-    spacesList.to_excel(writer,sheet_name='spaces')
-    userAttributeList.to_excel(writer,sheet_name='user_attribute')
-    exploreDict.to_excel(writer,sheet_name='explore')
-    aliasesDict.to_excel(writer,sheet_name='aliases')
-    setsDict.to_excel(writer,sheet_name='sets')
-    dimensionDict.to_excel(writer,sheet_name='dimension')
-    liquidDimensionList.to_excel(writer,sheet_name='liquid_dimension')
-    parameterDict.to_excel(writer,sheet_name='parameter')
-    joinDict.to_excel(writer,sheet_name='joins')
-    measureTypeList.to_excel(writer,sheet_name='measure_type')
-    filterDict.to_excel(writer,sheet_name='filters')
-    alwaysFilterDict.to_excel(writer,sheet_name='always_filter')
-    allDashboardList.to_excel(writer,sheet_name='all_Dashboards')
-    dashboardList.to_excel(writer,sheet_name='dashboard')
-    dashelementList.to_excel(writer,sheet_name='dashboard_element')
-    connectionList.to_excel(writer,sheet_name='connections')
-    dimensionList.to_excel(writer,sheet_name='dimension_List')
-    datagroupsList.to_excel(writer,sheet_name='all_data_groups')
-    groupUserList.to_excel(writer,sheet_name='single_group_User')
-    rolesList.to_excel(writer,sheet_name='roles')
-    localesList.to_excel(writer,sheet_name='locales')
-    singlelooksList.to_excel(writer,sheet_name='single_look')
-    viewsList.to_excel(writer,sheet_name='views')
-    measureList.to_excel(writer,sheet_name="measure")
+projectsList.to_excel(writer,sheet_name='projects')
+looksList.to_excel(writer,sheet_name='Looks')
+modelDict.to_excel(writer,sheet_name='models')
+allGroupsList.to_excel(writer,sheet_name='all_groups')
+userList.to_excel(writer,sheet_name='all_users')
+singleRoleUserList.to_excel(writer,sheet_name='single_user')
+spacesList.to_excel(writer,sheet_name='spaces')
+userAttributeList.to_excel(writer,sheet_name='user_attribute')
+exploreDict.to_excel(writer,sheet_name='explore')
+aliasesDict.to_excel(writer,sheet_name='aliases')
+setsDict.to_excel(writer,sheet_name='sets')
+dimensionDict.to_excel(writer,sheet_name='dimension')
+liquidDimensionList.to_excel(writer,sheet_name='liquid_dimension')
+parameterDict.to_excel(writer,sheet_name='parameter')
+joinDict.to_excel(writer,sheet_name='joins')
+measureTypeList.to_excel(writer,sheet_name='measure_type')
+filterDict.to_excel(writer,sheet_name='filters')
+alwaysFilterDict.to_excel(writer,sheet_name='always_filter')
+allDashboardList.to_excel(writer,sheet_name='all_Dashboards')
+dashboardList.to_excel(writer,sheet_name='dashboard')
+dashelementList.to_excel(writer,sheet_name='dashboard_element')
+connectionList.to_excel(writer,sheet_name='connections')
+dimensionList.to_excel(writer,sheet_name='dimension_List')
+datagroupsList.to_excel(writer,sheet_name='all_data_groups')
+groupUserList.to_excel(writer,sheet_name='single_group_User')
+rolesList.to_excel(writer,sheet_name='roles')
+localesList.to_excel(writer,sheet_name='locales')
+singlelooksList.to_excel(writer,sheet_name='single_look')
+viewsList.to_excel(writer,sheet_name='views')
+measureList.to_excel(writer,sheet_name="measure")
+
+writer.save()
