@@ -1441,30 +1441,29 @@ for user in users:
 
 
 stats = []
-stats.append(['Artifact Name',               'Count',                  'complexity'     ])
-stats.append(['Projects',               	(total_projects),               1           ])
-stats.append(['Spaces',                 	(total_spaces),                 1           ])
-stats.append(['Models',               	    (total_models),                 1           ])
-stats.append(['Explores',             	    (total_explores),               5           ])
-stats.append(['Dimensions',           	    (total_dimensions),				2			])
-stats.append(['Liquid Dimensions',          (total_liquid_dimensions),		10			])
-stats.append(['Measures', 				    (total_measures),				7			])
-stats.append(['Sets', 					    (total_sets),					0			])
-stats.append(['Connections', 				(total_connections),			0			])
-stats.append(['Looks', 					    (total_looks),					8			])
-stats.append(['Look Dynamic Fields', 		(total_dynamic_fields),			10			])
-stats.append(['Dashboards', 				(total_dashboards),				9			])
-stats.append(['Dashboards Elements', 		(total_dashboard_elements),		9			])
-stats.append(['DataGroups', 				(total_datagroups),				2			])
-stats.append(['Groups', 					(total_groups),					2			])
-stats.append(['Users Groups', 		        (total_users_in_groups),		2			])
-stats.append(['Users', 					    (total_users),					2			])
-stats.append(['Roles', 					    (total_roles),					2			])
-stats.append(['User Attributes', 			(total_user_attributes),		10			])
-stats.append(['total Views', 			    (len(distinct_views)),			2			])
-#stats.append(['Distinct Views', 			(len(distinct_views)),			2			])
-stats.append(['Always Filters', 			(total_always_filter),			2			])
-stats.append(['Locales', 					(total_locales),				2			])
+stats.append(['Artifact Name',               'Count',                  'complexity'     ,'Estimate (Hours)'                     ])
+stats.append(['Projects',               	(total_projects),               1           , 4 * (total_projects) * 1              ])
+stats.append(['Spaces',                 	(total_spaces),                 1           , 4 * (total_spaces) * 1                ])
+stats.append(['Models',               	    (total_models),                 1           , 4 * (total_models) * 1                ])
+stats.append(['Explores',             	    (total_explores),               7           , 0.25 * (total_explores) * 7              ])
+stats.append(['Dimensions',           	    (total_dimensions),				1			, 0.01 * (total_dimensions) * 1          ])
+stats.append(['Liquid Dimensions',          (total_liquid_dimensions),		10			, 0 * (total_liquid_dimensions) * 10    ])
+stats.append(['Measures', 				    (total_measures),				7			, 0.02 * (total_measures) * 7           ]) 
+stats.append(['Sets', 					    (total_sets),					0			, 0 * (total_sets) * 0                  ])
+stats.append(['Connections', 				(total_connections),			0			, 0 * (total_connections) * 0           ])
+stats.append(['Looks', 					    (total_looks),					8			, 0.15 * (total_looks) * 7                 ])
+stats.append(['Look Dynamic Fields', 		(total_dynamic_fields),			10			, 0 * (total_dynamic_fields) * 10       ])
+stats.append(['Dashboards', 				(total_dashboards),				7			, 0.25 * (total_dashboards) * 7            ])
+stats.append(['Dashboards Elements', 		(total_dashboard_elements),		7			, 0.15 * (total_dashboard_elements) * 7 ])
+stats.append(['DataGroups', 				(total_datagroups),				2			, 1 * (total_datagroups) * 2            ])
+stats.append(['Groups', 					(total_groups),					1			, 0.01 * (total_groups) * 1                ])
+stats.append(['Users Groups', 		        (total_users_in_groups),		2			, 0.01 * (total_users_in_groups) * 2       ])
+stats.append(['Users', 					    (total_users),					2			, 0.01 * (total_users) * 2                 ])
+stats.append(['Roles', 					    (total_roles),					2			, 0.01 * (total_roles) * 2                 ])
+stats.append(['User Attributes', 			(total_user_attributes),		10			, 0 * (total_user_attributes) * 10      ])
+stats.append(['total Views', 			    (len(distinct_views)),			2			, 0.3 * (len(distinct_views)) * 2       ])
+stats.append(['Always Filters', 			(total_always_filter),			2			, 0.5 * (total_always_filter) * 2       ])
+stats.append(['Locales', 					(total_locales),				10			, 0 * (total_locales) * 10              ])
 
 path = 'data_dictionary.xlsx'
 
@@ -1488,20 +1487,25 @@ worksheet = writer.sheets['Sheet1']
 worksheet.name = "Stats"
 
 bold = workbook.add_format({'bold': True})
-headings = ['Artifacts', 'Count', 'Complexity']
+headings = ['Artifacts', 'Count', 'Complexity','Estimate (Hours)', "Estimated (Weeks)"]
 
 data = rez
+
+hours = ["=ROUND(SUM(D2:D22) / (8 * 5), 0)"]
 
 worksheet.write_row('A1', headings, bold)
 worksheet.write_column('A2', data[0])
 worksheet.write_column('B2', data[1])
 worksheet.write_column('C2', data[2])
+worksheet.write_column('D2', data[3])
+worksheet.write_column('E2', hours)
 
 column_chart2 = workbook.add_chart({'type': 'column'})
 column_chart2.add_series({
     'name':       '=Stats!$B$1',
     'categories': '=Stats!$A$2:$A$22',
     'values':     '=Stats!$B$2:$B$22',
+    
 })
 
 line_chart2 = workbook.add_chart({'type': 'line'})
