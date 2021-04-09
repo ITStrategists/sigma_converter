@@ -3,7 +3,7 @@ import logging
 import json
 import re
 import pandas as pd
-
+from itertools import chain
 
 logging.basicConfig(filename='data_dictionary.log',level=logging.INFO, filemode='w', format = '%(asctime)s:%(levelname)s:%(message)s')
 
@@ -36,7 +36,7 @@ total_looks = 0
 total_aliases = 0
 
 sdk = looker_sdk.init31('looker.ini')
-#----------------------------------------- Explore Model ~Start -------------------------------------------------------
+
 models = sdk.all_lookml_models(fields= 'name, label, project_name, allowed_db_connection_names,has_content,can, unlimited_db_connections, explores')
 model_DictList = []
 explore_DictList = []
@@ -67,15 +67,12 @@ conDictList = []
 dashElementDictList = []
 dash_DictList = []
 measure_DictList = []
+
+#----------------------------------------- Explore Model ~Start -------------------------------------------------------
 for model in models:
 
     if model.name == "system__activity":
         continue
-
-    #str_ = pformat(model)
-    #formatted_string = FormatCode(str_)
-    #logging.info(formatted_string)
-#----------------------------------------- Explore Model  ~start ---------------------------------------------------------    
     modelDic = {
         "name":model.name,
         "label":model.label,
@@ -91,10 +88,10 @@ for model in models:
         "can_destroy" : None if 'destroy' not in model.can else model.can["destroy"],
     }
     model_DictList.append(modelDic)
-
     total_models = total_models + 1
         
 #----------------------------------------- explore  ~start ---------------------------------------------------------
+
     for explore in model.explores:
         print("Tryging ... {}:{}".format(model.name, explore.name))
         exploreObj = sdk.lookml_model_explore(lookml_model_name=model.name,explore_name=explore.name)
@@ -140,6 +137,7 @@ for model in models:
             }
             aliases_DictList.append(aliasesdict)
             total_aliases = total_aliases + 1
+
 #----------------------------------------- set  ~start ---------------------------------------------------------
         for set in exploreObj.sets:
             setsdict = {
@@ -150,6 +148,7 @@ for model in models:
             }
             sets_DictList.append(setsdict)
             total_sets = total_sets + 1
+
 #----------------------------------------- set ~End ---------------------------------------------------------
 
 #----------------------------------------- Dimension ~start ---------------------------------------------------------
@@ -221,12 +220,13 @@ for model in models:
             if liquidTemplate:
                 total_liquid_dimensions = total_liquid_dimensions + 1
                 liquid_dimension_DictList.append(dimensionsdict)
-            if dimension.measure == True:
-                measure_DictList.append(dimensionsdict)
-                total_measures = total_measures + 1 
+           # if dimension.measure == True or str(dimension.measure) == 'TRUE':
+             #   measure_DictList.append(dimensionsdict)
+            #    
+
 #----------------------------------------- dimension  ~End ---------------------------------------------------------             
 
-#----------------------------------------- view  ~start ---------------------------------------------------------               
+#----------------------------------------- measure  ~start ---------------------------------------------------------               
         for dimension in exploreObj.fields.dimensions: 
             viewsdict = {
                 "model_name":model.name,
@@ -235,7 +235,70 @@ for model in models:
             }
             view_DictList.append(viewsdict)
             total_views = total_views + 1
-#----------------------------------------- view  ~End ---------------------------------------------------------
+            #print(str(viewsdict))
+            for val in viewsdict.values():
+                if val in distinct_views:
+                    continue
+                else:
+                    distinct_views.append(val)
+        for measure in exploreObj.fields.measures: 
+            dimensionsdict = {
+                "model_name":model.name,
+                "explore_id":exploreObj.id, 
+                "align":measure.align,
+                "can_filter":measure.can_filter,
+                "category":measure.category,
+                "default_filter_value":measure.default_filter_value,
+                "description":measure.description,
+                "enumerations":measure.enumerations,
+                "error":measure.error,
+                "field_group_label":measure.field_group_label,
+                "field_group_variant":measure.field_group_variant,
+                "fill_style":measure.fill_style,
+                "fiscal_month_offset":measure.fiscal_month_offset,
+                "has_allowed_values":measure.has_allowed_values,
+                "hidden":measure.hidden,
+                "is_filter":measure.is_filter,
+                "is_fiscal":measure.is_fiscal,
+                "is_numeric":measure.is_numeric,
+                "is_timeframe":measure.is_timeframe,
+                "can_time_filter":measure.can_time_filter,
+                "time_interval":measure.time_interval,
+                "label":measure.label,
+                "label_from_parameter":measure.label_from_parameter,
+                "label_short":measure.label_short,
+                "lookml_link":measure.lookml_link,
+                "map_layer":measure.map_layer,
+                "name":measure.name,
+                "strict_value_format":measure.strict_value_format,
+                "parameter":measure.parameter,
+                "permanent":measure.permanent,
+                "primary_key":measure.primary_key,
+                "project_name":measure.project_name,
+                "requires_refresh_on_sort":measure.requires_refresh_on_sort,
+                "scope":measure.scope,
+                "sortable":measure.sortable,
+                "source_file":measure.source_file,
+                "source_file_path":measure.source_file_path,
+                "sql":measure.sql,
+                "sql_case":measure.sql_case,
+                "filters":measure.filters,
+                "suggest_dimension":measure.suggest_dimension,
+                "suggest_explore":measure.suggest_explore,
+                "suggestable":measure.suggestable,
+                "suggestions":measure.suggestions,
+                "tags":measure.tags,
+                "type":measure.type,
+                "user_attribute_filter_types":measure.user_attribute_filter_types,
+                "value_format":measure.value_format,
+                "view":measure.view,
+                "view_label":measure.view_label,
+                "dynamic":measure.dynamic,
+                "week_start_day":measure.week_start_day,
+            }
+            measure_DictList.append(dimensionsdict)
+            total_measures = total_measures + 1 
+#----------------------------------------- measure  ~End ---------------------------------------------------------
 
 #----------------------------------------- always filter  ~start ---------------------------------------------------------
         for always_filter_item in exploreObj.always_filter:
@@ -246,10 +309,10 @@ for model in models:
                 "value":always_filter_item.value,
             }
             always_filter_DictList.append(alwaysfilterdict)
-            
             total_always_filter = total_always_filter + 1
+
 #----------------------------------------- always filter  ~End ---------------------------------------------------------
-        #logging.info(exploreObj.fields.filters)
+        
 
 #----------------------------------------- filters ~start ---------------------------------------------------------
         for filter in exploreObj.fields.filters:
@@ -312,7 +375,7 @@ for model in models:
  
  #----------------------------------------- parameter  ~start ---------------------------------------------------------
         for parameter in exploreObj.fields.parameters:
-            #print(parameter)
+            
             parametersdict = {
                 "model_name":model.name,
                 "explore_id":exploreObj.id, 
@@ -393,8 +456,11 @@ for model in models:
                 "view_label":join.view_label,
             }
             joins_DictList.append(joinsdict)
+
         for supported_measure_type in exploreObj.supported_measure_types:
             measuretypesdict =    {
+                "model_name":model.name,
+                "explore_id":exploreObj.id,
                 "measure_types":supported_measure_type.measure_types,
             }
             measure_type_DictList.append(measuretypesdict)
@@ -403,102 +469,6 @@ for model in models:
 
 #----------------------------------------- Explore Model ~End -------------------------------------------------------
 
-#-----------------------------------------Single Dashboard  ~Start -------------------------------------------------------
-
-s_dashboard = sdk.all_dashboards()
-
-for dash in s_dashboard:
-    dashboard = sdk.dashboard(dashboard_id=dash.id)  
-    dash_Dict = {
-        "can_download" : None if 'download' not in dashboard.can else dashboard.can["download"],
-        "can_see_aggregate_table_lookml" : None if 'see_aggregate_table_lookml' not in dashboard.can else dashboard.can["see_aggregate_table_lookml"],
-        "can_index" : None if 'index' not in dashboard.can else dashboard.can["index"],
-        "can_show" : None if 'show' not in dashboard.can else dashboard.can["show"],
-        "can_copy" : None if 'copy' not in dashboard.can else dashboard.can["copy"],
-        "can_run" : None if 'run' not in dashboard.can else dashboard.can["run"],
-        "can_create" : None if 'create' not in dashboard.can else dashboard.can["create"],
-        "can_move" : None if 'move' not in dashboard.can else dashboard.can["move"],
-        "can_update" : None if 'update' not in dashboard.can else dashboard.can["update"],
-        "can_destroy" : None if 'destroy' not in dashboard.can else dashboard.can["destroy"],
-        "can_recover" : None if 'recover' not in dashboard.can else dashboard.can["recover"],
-        "can_see_lookml" : None if 'see_lookml' not in dashboard.can else dashboard.can["see_lookml"],
-        "can_schedule" : None if 'schedule' not in dashboard.can else dashboard.can["schedule"],
-        "can_render" : None if 'render' not in dashboard.can else dashboard.can["render"],
-
-        "content_favorite_id" : dashboard.content_favorite_id,
-        "content_metadata_id" : dashboard.content_metadata_id,
-        "description" : dashboard.description,
-        "hidden" : dashboard.hidden,
-        "id" : dashboard.id,
-        "model" : dashboard.model,
-        "query_timezone" : str(dashboard.query_timezone),
-        "readonly" : dashboard.readonly,
-        "refresh_interval" : dashboard.refresh_interval,
-        "refresh_interval_to_i" : dashboard.refresh_interval_to_i,
-        "title" : dashboard.title,
-        "user_id" : dashboard.user_id,
-
-        "folder_parent_id" : dashboard.folder.parent_id,
-        "folder_id" : dashboard.folder.id,
-        "folder_content_metadata_id" : dashboard.folder.content_metadata_id,
-        "folder_created_at" : str(dashboard.folder.created_at),
-        "folder_creator_id" : dashboard.folder.creator_id,
-        "folder_child_count" : dashboard.folder.child_count,
-        "folder_external_id" : dashboard.folder.external_id,
-        "folder_is_embed" : dashboard.folder.is_embed,
-        "folder_is_embed_shared_root" : dashboard.folder.is_embed_shared_root,
-        "folder_is_embed_users_root" : dashboard.folder.is_embed_users_root,
-        "folder_is_personal" : dashboard.folder.is_personal,
-        "folder_is_personal_descendant" : dashboard.folder.is_personal_descendant,
-        "folder_is_shared_root" : dashboard.folder.is_shared_root,
-        "folder_is_users_root" : dashboard.folder.is_users_root,
-
-        "folder_can_index" : None if 'index' not in dashboard.folder.can else dashboard.folder.can["index"],
-        "folder_can_show" : None if 'show' not in dashboard.folder.can else dashboard.folder.can["show"],
-        "folder_can_create" : None if 'create' not in dashboard.folder.can else dashboard.folder.can["create"],
-        "folder_can_see_admin_spaces" : None if 'see_admin_spaces' not in dashboard.folder.can else dashboard.folder.can["see_admin_spaces"],
-        "folder_can_update" : None if 'update' not in dashboard.folder.can else dashboard.folder.can["update"],
-        "folder_can_destroy" : None if 'destroy' not in dashboard.folder.can else dashboard.folder.can["destroy"],
-        "folder_can_move_content" : None if 'move_content' not in dashboard.folder.can else dashboard.folder.can["move_content"],
-        "folder_can_edit_content" : None if 'edit_content' not in dashboard.folder.can else dashboard.folder.can["edit_content"],
-
-        "title" : dashboard.title,
-        "user_id" : dashboard.user_id,
-
-        "space_parent_id" : dashboard.space.parent_id,
-        "space_id" : dashboard.space.id,
-        "space_content_metadata_id" : dashboard.space.content_metadata_id,
-        "space_created_at" : str(dashboard.space.created_at),
-        "space_creator_id" : dashboard.space.creator_id,
-        "space_child_count" : dashboard.space.child_count,
-        "space_external_id" : dashboard.space.external_id,
-        "space_is_embed" : dashboard.space.is_embed,
-        "space_is_embed_shared_root" : dashboard.space.is_embed_shared_root,
-        "space_is_embed_users_root" : dashboard.space.is_embed_users_root,
-        "space_is_personal" : dashboard.space.is_personal,
-        "space_is_personal_descendant" : dashboard.space.is_personal_descendant,
-        "space_is_shared_root" : dashboard.space.is_shared_root,
-        "space_is_users_root" : dashboard.space.is_users_root,
-
-        "space_can_index" : None if 'index' not in dashboard.space.can else dashboard.space.can["index"],
-        "space_can_show" : None if 'show' not in dashboard.space.can else dashboard.space.can["show"],
-        "space_can_create" : None if 'create' not in dashboard.space.can else dashboard.space.can["create"],
-        "space_can_see_admin_spaces" : None if 'see_admin_spaces' not in dashboard.space.can else dashboard.space.can["see_admin_spaces"],
-        "space_can_update" : None if 'update' not in dashboard.space.can else dashboard.space.can["update"],
-        "space_can_destroy" : None if 'destroy' not in dashboard.space.can else dashboard.space.can["destroy"],
-        "space_can_move_content" : None if 'move_content' not in dashboard.space.can else dashboard.space.can["move_content"],
-        "space_can_edit_content" : None if 'edit_content' not in dashboard.space.can else dashboard.space.can["edit_content"],
-         
-        "background_color" : dashboard.background_color,
-        "created_at" : str(dashboard.created_at),
-        "crossfilter_enabled" : dashboard.crossfilter_enabled,
-    }
-    dash_DictList.append(dash_Dict)
-
-
-#print(dash_DataFrame)
-
-#-----------------------------------------Single Dashboard  ~End ---------------------------------------------------------
 #----------------------------------------- Dashboard Element ~Start -------------------------------------------------------
 
 s_dashboard = sdk.all_dashboards()
@@ -552,7 +522,6 @@ for dash in s_dashboard:
             "query_can_schedule" : None if dash_element.query is None else dash_element.query.can["schedule"],
             "query_can_render" : None if dash_element.query is None else dash_element.query.can["render"],
 
-            "query_id" : None if dash_element.query is None else dash_element.query.id,
             "query_fields" : None if dash_element.query is None else dash_element.query.fields,
             "query_pivots" : None if dash_element.query is None else dash_element.query.pivots,
             "query_fill_fields" : None if dash_element.query is None else dash_element.query.fill_fields,
@@ -584,7 +553,7 @@ for dash in s_dashboard:
             "query_id":{} if dash_element.query is None else dash_element.query_id,
             "refresh_interval":{} if dash_element.query is None else dash_element.refresh_interval,
             "refresh_interval_to_i":dash_element.refresh_interval_to_i,
-            "result_maker_id":dash_element.result_maker.id,
+
             "result_maker_dynamic_fields":dash_element.result_maker.dynamic_fields,
             "result_maker_sorts":dash_element.result_maker.sorts,
             "result_maker_merge_result_id":dash_element.result_maker.merge_result_id,
@@ -596,7 +565,6 @@ for dash in s_dashboard:
             "result_maker_query_view":dash_element.result_maker.query.view,
             "result_maker_query_can":dash_element.result_maker.query.can,
 
-            "result_maker_query_id" : dash_element.result_maker.query.id,
             "result_maker_query_fields" : dash_element.result_maker.query.fields,
 
             "result_maker_query_pivots" : dash_element.result_maker.query.pivots,
@@ -633,16 +601,13 @@ for dash in s_dashboard:
             "alert_count":dash_element.alert_count,
             "title_text_as_html":dash_element.title_text_as_html,
             "subtitle_text_as_html":dash_element.subtitle_text_as_html,
-            
             "filterables":dash_element.result_maker.filterables,
-
-
-         }
+        }
         dashElementDictList.append(data_groupsDict)
         total_dashboard_elements = total_dashboard_elements + 1
-        total_dynamic_fields = total_dynamic_fields + 1
+        if str(dash_element.result_maker.query.dynamic_fields) is not None and str(dash_element.result_maker.query.dynamic_fields) != '{}' and str(dash_element.result_maker.query.dynamic_fields) != '[]' and str(dash_element.result_maker.query.dynamic_fields) != 'None':
+            total_dynamic_fields = total_dynamic_fields + 1
 
-#print(dash_element_DataFrame)
 #----------------------------------------- Dashboard Element ~End ---------------------------------------------------------
 
 #----------------------------------------- Connection  ~Start ---------------------------------------------------------
@@ -711,25 +676,18 @@ for cItem in con:
         "dialect_has_ssl_support" : cItem.dialect.has_ssl_support,
     }
     conDictList.append(conDict)
-   
     total_connections = total_connections + 1
 
 #----------------------------------------- Connection  ~End ---------------------------------------------------------
 
 #----------------------------------------- All Dashboard  ~Start ---------------------------------------------------------
 
-    
-#df = pd.DataFrame(conDictList)
-#df.to_csv("connections.csv")
 
 dashboards = sdk.dashboard(dashboard_id="1")
-#logging.info(dashboards)
 
 dashboards = sdk.all_dashboards()
 for dashboard in dashboards:
     logging.info(dashboard)
-    #print(dashboard)
-    #logging.info(dashboard.can)
     dashboardDict = {
         "id" : dashboard.id,
         "title" : dashboard.title,
@@ -818,85 +776,11 @@ for dashboard in dashboards:
     }
     dashboardDictList.append(dashboardDict)
     total_dashboards = total_dashboards + 1
-    
 
 #----------------------------------------- All Dashboard  ~End ---------------------------------------------------------
 
 
-#-----------------------------------------All Dimensions ~Start -------------------------------------------------------
-
-
-########################################################################################################
-'''models = sdk.all_lookml_models(fields= 'name, label, project_name, allowed_db_connection_names,has_content,can, unlimited_db_connections, explores')
-for model in models:
-    logging.info(model.name)
-    if model.name == 'system__activity':
-        continue
-    if model.name != 'its_sig':
-        continue
-      
-    lookml_model = sdk.lookml_model(lookml_model_name = model.name)
-    modelDict = {
-        "name": lookml_model.name,
-        "label": lookml_model.label,
-        "project_name": lookml_model.project_name,
-        "allowed_db_connection_names": lookml_model.allowed_db_connection_names,
-        "has_content": lookml_model.has_content,
-        "can": lookml_model.can,
-        "unlimited_db_connections": lookml_model.unlimited_db_connections
-    }
-
-    
-    for explore in lookml_model.explores:
-
-        if explore.name != 'order_items':
-            continue
-
-        exploreObj = sdk.lookml_model_explore(
-            lookml_model_name=model.name,
-            explore_name=explore.name
-        )
-        dim_list = []
-        liquid_dim_list = []
-        for dimension in exploreObj.fields.dimensions:
-            dim_def = {
-                "name":dimension.name,
-                "primary_key": dimension.primary_key,
-                "type":dimension.type,
-                "view":dimension.view,
-                "view_label": dimension.view_label,
-                "description": dimension.description,
-                "sql": dimension.sql,
-                "label_short":dimension.label_short,
-            }
-            dim_list.append(dim_def)
-      
-
-        dimensions = json.dumps(dim_list)
-            
-            
-
-################################################################################################################
-
-
-dimension_DictList = []
-
-for dimension in dim_list:
-    dimensionDict = {
-        "description" : None if 'description' not in dimension else dimension["description"],
-        "label_short" : None if 'label_short' not in dimension else dimension["label_short"],
-        "name" : None if 'name' not in dimension else dimension["name"],
-        "primary_key" : None if 'primary_key' not in dimension else dimension["primary_key"],
-        "sql" : None if 'sql' not in dimension else dimension["sql"],
-        "type" : None if 'type' not in dimension else dimension["type"],
-        "view" : None if 'view' not in dimension else dimension["view"],
-        "view_label" : None if 'view_label' not in dimension else dimension["view_label"],
-
-    }
-    dimension_DictList.append(dimensionDict)
-#-----------------------------------------All Dimensions ~End ---------------------------------------------------------
-'''
-#-----------------------------------------Single Group Users ~Start -------------------------------------------------------
+#-----------------------------------------Users Group  ~Start -------------------------------------------------------
 
 groups = sdk.all_groups()
 
@@ -961,15 +845,13 @@ for group in groups:
             "allow_normal_group_membership" : user.allow_normal_group_membership,
             "allow_roles_from_normal_groups" : user.allow_roles_from_normal_groups,
             "url" : user.url,
-
         }
           
     groups_DictList.append(groupsDict)
     total_users_in_groups = total_users_in_groups + 1
  
-#print(user_groups_DataFrame)
 
-#-----------------------------------------Single Group Users ~End ---------------------------------------------------------
+#-----------------------------------------Users Group  ~End ---------------------------------------------------------
 #-----------------------------------------All Data Groups ~Start -------------------------------------------------------
 
 data_groups = sdk.all_datagroups()
@@ -993,7 +875,6 @@ for data_group in data_groups:
 
     }
     data_groups_DictList.append(data_groupsDict)
-    
     total_datagroups = total_datagroups + 1
     
 #-----------------------------------------All Data Groups ~End -------------------------------------------------------
@@ -1035,13 +916,10 @@ for role in roles:
         "model_set_id_model_set_id" : role.model_set_id,
         "model_set_id_url" : role.url,
         "model_set_id_users_url" : role.users_url,
-
-
     }
     roles_DictList.append(roleDict)
     total_roles = total_roles + 1
-#roles_DataFrame = pd.DataFrame(roles_DictList)
-#print(roles_DataFrame)
+
 
 #-----------------------------------------All Roles ~End ---------------------------------------------------------
 
@@ -1057,15 +935,10 @@ for locale in locales:
         "code" : locale.code,
         "native_name" : locale.native_name,
         "english_name" : locale.english_name,
-
-
     }
     locales_DictList.append(localeDict)
-
     total_locales = total_locales + 1
     
-#print(locales_DataFrame)
-
 #-----------------------------------------All Locales ~End ---------------------------------------------------------
 
 
@@ -1095,7 +968,6 @@ for look in looks:
         "can_schedule" : None if 'schedule' not in s_look.can else s_look.can["schedule"],
         "can_render" : None if 'render' not in s_look.can else s_look.can["render"],
  
-
         "content_metadata_id" : s_look.content_metadata_id,
         "id" : s_look.id,
         "title" : s_look.title,
@@ -1145,12 +1017,10 @@ for look in looks:
         "folder_can_move_content" : None if 'move_content' not in s_look.folder.can else s_look.folder.can["move_content"],
         "folder_can_edit_content" : None if 'edit_content' not in s_look.folder.can else s_look.folder.can["edit_content"],
 
-        "folder_id" : s_look.folder_id,
         "updated_at" : str(s_look.updated_at),
         "user_id" : s_look.user_id,
         "view_count" : s_look.view_count,
-        "user" : s_look.user,
-        "space_id" : s_look.space_id,   
+        "user" : s_look.user,  
 
         "space_name" : s_look.space.name,
         "space_parent_id" : s_look.space.parent_id,
@@ -1193,14 +1063,12 @@ for look in looks:
         "query_can_see_derived_table_lookml" : None if 'see_derived_table_lookml' not in s_look.query.can else s_look.query.can["see_derived_table_lookml"],
         "query_can_see_sql" : None if 'see_sql' not in s_look.query.can else s_look.query.can["see_sql"],
         "query_can_save" : None if 'save' not in s_look.query.can else s_look.query.can["save"],
-        "query_can_True," : None if 'True,' not in s_look.query.can else s_look.query.can["True,"],
         "query_can_generate_drill_links" : None if 'generate_drill_links' not in s_look.query.can else s_look.query.can["generate_drill_links"],
         "query_can_download" : None if 'download' not in s_look.query.can else s_look.query.can["download"],
         "query_can_download_unlimited" : None if 'download_unlimited' not in s_look.query.can else s_look.query.can["download_unlimited"],
         "query_can_schedule" : None if 'schedule' not in s_look.query.can else s_look.query.can["schedule"],
         "query_can_render" : None if 'render' not in s_look.query.can else s_look.query.can["render"],
 
-        "query_id" : s_look.query.id,
         "query_fields" : s_look.query.fields,
         "query_pivots" : s_look.query.pivots,
         "query_fill_fields" : s_look.query.fill_fields,
@@ -1216,7 +1084,6 @@ for look in looks:
         "query_column_limit" : s_look.query.column_limit,
         "query_row_total" : s_look.query.row_total,
         "query_subtotals" : s_look.query.subtotals,
-        "query_sorts" : s_look.query.sorts,
 
         "query_vis_config_custom_color_enabled" : None if 'custom_color_enabled' not in s_look.query.vis_config else s_look.query.vis_config["custom_color_enabled"],
         "query_vis_config_show_single_value_title" : None if 'show_single_value_title' not in s_look.query.vis_config else s_look.query.vis_config["show_single_value_title"],
@@ -1267,7 +1134,7 @@ for look in looks:
     s_looks_DictList.append(look_Dict)
     
 
-#print(s_looks_DataFrame)
+
 
 #-----------------------------------------Single Look ~End ---------------------------------------------------------
 
@@ -1348,24 +1215,7 @@ for look in looks:
         "look_user_id" : look.user_id,
         "look_view_count" : look.view_count,
         "look_user" : look.user,
-        
-'''
-        #"look_space_certificate" : look.space.certificate,
-        "look_space_file_type" : look.space.file_type,
-        "look_space_database" : look.space.database,
-        "look_space_db_timezone" : str(look.space.db_timezone),
-        "look_space_query_timezone" : str(look.space.query_timezone),
-        "look_space_schema" : look.space.schema,
-        "look_space_max_connections" : look.space.max_connections,
-        "look_space_max_billing_gigabytes" : look.space.max_billing_gigabytes,
-        "look_space_ssl" : look.space.ssl,
-        "look_space_verify_ssl" : look.space.verify_ssl,
-        "look_space_tmp_db_name" : look.space.tmp_db_name,
-        "look_space_jdbc_additional_params" : look.space.jdbc_additional_params,
-        "look_space_pool_timeout" : look.space.pool_timeout,
-        "look_space_dialect_name" : look.space.dialect_name,
-        "look_space_created_at" : str(look.space.created_at),
-'''
+
         "look_space_can_index" : None if 'index' not in look.space.can else look.space.can["index"],
         "look_space_can_show" : None if 'show' not in look.space.can else look.space.can["show"],
         "look_space_can_create" : None if 'create' not in look.space.can else look.space.can["create"],
@@ -1379,7 +1229,6 @@ for look in looks:
     looks_DictList.append(looks_Dict)
     total_looks = total_looks + 1
            
-#print(looks_DataFrame)
 
 #-----------------------------------------All looks ~End ---------------------------------------------------------
 
@@ -1413,9 +1262,8 @@ for project in projects:
         "project_is_example" : project.is_example,
     }
     projects_DictList.append(projectsDict)
- 
     total_projects = total_projects + 1
-#print(projects_DataFrame)
+
 
 #-----------------------------------------All Projects ~End ---------------------------------------------------------
 
@@ -1445,67 +1293,9 @@ for group in groups:
 
     total_groups = total_groups + 1
        
-#print(group_DataFrame)
+
 
 #-----------------------------------------All Group ~End ---------------------------------------------------------
-
-
-
-
-#-----------------------------------------Single Role Users ~Start -------------------------------------------------------
-
-
-role_users = sdk.role_users(role_id=2)
-for user in role_users:
-    roles_Dict = {
-        "user_can_show" : None if 'show' not in user.can else user.can["show"],
-        "user_can_index" : None if 'index' not in user.can else user.can["index"],
-        "user_can_show_details" : None if 'show_details' not in user.can else user.can["show_details"],
-        "user_can_index_details" : None if 'index_details' not in user.can else user.can["index_details"],
-        "user_can_sudo" : None if 'sudo' not in user.can else user.can["sudo"],
-
-        "user_avatar_url" : user.avatar_url,
-        "user_avatar_url_without_sizing" : user.avatar_url_without_sizing,
-        "user_credentials_api3" : user.credentials_api3,
-        "user_credentials_email" : user.credentials_email,
-        "user_credentials_embed" : user.credentials_embed,
-        "user_credentials_google" : user.credentials_google,
-        "user_credentials_ldap" : user.credentials_ldap,
-        "user_credentials_looker_openid" : user.credentials_looker_openid,
-        "user_credentials_oidc" : user.credentials_oidc,
-        "user_credentials_saml" : user.credentials_saml,
-        "user_credentials_totp" : user.credentials_totp,
-        "user_display_name" : user.display_name,
-        "user_email" : user.email,
-        "user_embed_group_space_id" : user.embed_group_space_id,
-        "user_first_name" : user.first_name,
-        "user_group_ids" : user.group_ids,
-        "user_home_space_id" : user.home_space_id,
-        "user_home_folder_id" : user.home_folder_id,
-        "user_id" : user.id,
-        "user_is_disabled" : user.is_disabled,
-        "user_last_name" : user.last_name,
-        "user_locale" : user.locale,
-        "user_looker_versions" : user.looker_versions,
-        "user_models_dir_validated" : user.models_dir_validated,
-        "user_personal_space_id" : user.personal_space_id,
-        "user_personal_folder_id" : user.personal_folder_id,
-        "user_presumed_looker_employee" : user.presumed_looker_employee,
-        "user_role_ids" : user.role_ids,
-        "user_sessions" : user.sessions,
-        "user_ui_state" : user.ui_state,
-        "user_verified_looker_employee" : user.verified_looker_employee,
-        "user_roles_externally_managed" : user.roles_externally_managed,
-        "user_allow_direct_roles" : user.allow_direct_roles,
-        "user_allow_normal_group_membership" : user.allow_normal_group_membership,
-        "user_allow_roles_from_normal_groups" : user.allow_roles_from_normal_groups,
-        "user_url" : user.url,
-    }
-    r_users_DictList.append(roles_Dict)
- 
-#print(roles_DataFrame)
-
-#-----------------------------------------Single Role Users ~End ---------------------------------------------------------
 
 
 #-----------------------------------------All Spaces -Start --------------------------------------------------------
@@ -1646,220 +1436,35 @@ for user in users:
   
     total_users = total_users + 1
 
-#print(userDataFrame)
-
-
-
 
 #########################################--All Users-End--##################################
 
 
-
-''' 
-    dashboard_elements = sdk.dashboard_dashboard_elements(dashboard_id = dashboard.id)
-
-dash1 = sdk.all_dashboards()
-for q in dash1:
-   
-    can = q.can
-    content_favorite_id = q.content_favorite_id
-    description = q.description
-    hidden = q.hidden
-    Id = q.id
-    model = q.model
-    query_timezone = q.query_timezone
-    readonly = q.readonly
-    refresh_interval = q.refresh_interval
-    refresh_interval_to_i = q.refresh_interval_to_i 
-    folder = q.folder
-    title = q.title
-    user_id = q.user_id
-    space = q.space
-        
-    print("\nDashboardBase \n can =")
-    for c,r in can.items():
-        print("       {} : {}".format(c,r))
-    print("\n content_favorite_id : {} \n description: {} \n hidden : {} \n Id : {} \n model : {} \n query_timezone: {} \n readonly : {} \n refresh_interval : {} \n refresh_interval_to_i : {} \n"
-    .format(content_favorite_id,description,hidden, Id, model, query_timezone, readonly, refresh_interval ,refresh_interval_to_i))
-    print("folder \n FolderBase =")
-    for f in folder:
-                
-        if type(folder[f]) != dict :
-            print("       {} : {}".format(f,folder[f]))
-        
-        if type(folder[f]) == dict :
-            print("\n       can =")
-            for i,b in folder[f].items():
-                print("          {} : {} ".format(i,b))
-    print("\n title : {} \n user_id : {} \n".format(title, user_id))
-    print("space \n SpaceBase =")
-    for s in space:
-       
-        if type(space[s]) != dict :
-            print("       {} : {}".format(s,space[s]))
-        
-        if type(space[s]) == dict :
-            print("\n       can =")
-            for i,b in space[s].items():
-                print("          {} : {} ".format(i,b))
-
-    dash_element = sdk.dashboard_dashboard_elements(dashboard_id = q.id)
-
-    #logging.info(dash_element)
-
-    for element in dash_element:
-      #  total_dashboard_elements = total_dashboard_elements + 1
-
-a_looks = sdk.all_looks()
-#logging.info(a_looks)
-for a in a_looks:
-    total_looks = total_looks + 1
-    look = sdk.look(look_id = a.id)
-    if look.query.dynamic_fields is not None:
-      
-
-all_user_attributes = sdk.all_user_attributes()
-print(all_user_attributes)
-for user_attribute in all_user_attributes:
-    print(user_attribute)
-   
-
-all_roles = sdk.all_roles()
-print(all_roles)
-for role in all_roles:
-    
-
-all_users = sdk.all_users()
-#print(all_users)
-for user in all_users:
-    print(user)
-    
-
-g_group = sdk.all_groups()
-print(g_group)
-for group in g_group:
-    groupId = group.id
-
-    group_users = sdk.all_group_users(group_id=groupId)
-    for group_user in group_users:
-        print(group_user)
-           
-
-data_groups = sdk.all_datagroups()
-for data_group in data_groups:
-
-    print(data_group.id)
-
-models = sdk.all_lookml_models(fields= 'name, label, project_name, allowed_db_connection_names,has_content,can, unlimited_db_connections, explores')
-for model in models:
-    if model.name == 'system__activity':
-        continue
-         
-    name = model.name
-    label = model.label
-    project_name = model.project_name
-    has_content = model.has_content
-    allowed_db_connection_names = model.allowed_db_connection_names
-    can = model.can
-    unlimited_db_connections = model.unlimited_db_connections
-    explores = model.explores
-    print("Name: {}\n Label: {}\n Project Name: {}\n allowed_db_connection_names: {}\n has_content: {}\n unlimited_db_connections: {}\n "
-          .format(name, label,project_name,allowed_db_connection_names,has_content,unlimited_db_connections))
-    print("Can:")
-    for x, y in can.items():
-        print("   {}:{}".format(x,y))
-
-    
-    for explore in model.explores:
-        print(explore.name)
-        exploreObj = sdk.lookml_model_explore(
-            lookml_model_name=model.name,
-            explore_name=explore.name
-        )
-       
-
-        logging.info(exploreObj)
-
-        for dimension in exploreObj.fields.dimensions:
-            #logging.info(dimension)
-            dim_def = {
-                "name":dimension.name,
-                "primary_key": dimension.primary_key,
-                "type":dimension.type,
-                "view":dimension.view,
-                "view_label": dimension.view_label,
-                "description": dimension.description,
-                "sql": dimension.sql,
-                "label_short":dimension.label_short,
-            }
-           
-
-            views.append(dimension.source_file_path)
-
-            
-
-        e_measure = exploreObj.fields.measures
-        for q in e_measure:
-            print("\n")
-            for x,y in q.items():
-                print("{} : {}".format(x,y))
-                
-
-        s = exploreObj.sets
-
-        for q in s:
-            print("\n")
-            print(s)
-            for t in q:
-                print(t)
-                
-
-        if exploreObj.always_filter != []:
-             
-
-
-
-
-distinct_views = []
-
-for viewItem in views:
-    found = False
-    for view in distinct_views:
-        if viewItem == view:
-            found = True
-    if found == False:
-        distinct_views.append(viewItem) 
-
-
-    
-'''
-
-
-
 stats = []
-stats.append(['Artifact Name',                  'Count',                        'complexity'    ])
-stats.append(['All Projects',               	(total_projects),                1           ])
-stats.append(['All Spaces',                 	(total_spaces),                  1           ])
-stats.append(['Total Models',               	(total_models),                  1           ])
-stats.append(['Total Explores',             	(total_explores),                5           ])
-stats.append(['Total Dimensions',           	(total_dimensions),				2			])
-stats.append(['Total Liquid Dimensions',        (total_liquid_dimensions),		10			])
-stats.append(['Total Measures', 				(total_measures),				7			])
-stats.append(['Total Sets', 					(total_sets),					0			])
-stats.append(['Total Connections', 				(total_connections),				0			])
-stats.append(['Total Looks', 					(total_looks),					8			])
-stats.append(['Total Look Dynamic Fields', 		(total_dynamic_fields),			10			])
-stats.append(['Total Dashboards', 				(total_dashboards),				9			])
-stats.append(['Total Dashboards Elements', 		(total_dashboard_elements),		9			])
-stats.append(['Total DataGroups', 				(total_datagroups),				2			])
-stats.append(['Total Groups', 					(total_groups),					2			])
-stats.append(['Total Users in all groups', 		(total_users_in_groups),			2			])
-stats.append(['Total Users', 					(total_users),					2			])
-stats.append(['Total Roles', 					(total_roles),					2			])
-stats.append(['Total User Attributes', 			(total_user_attributes),			10			])
-stats.append(['Total Views', 					(len(distinct_views)),			2			])
-stats.append(['Total Always Filters', 			(total_always_filter),			2			])
-stats.append(['All Locales', 					(total_locales),					2			])
+stats.append(['Artifact Name',               'Count',                  'complexity'     ])
+stats.append(['Projects',               	(total_projects),               1           ])
+stats.append(['Spaces',                 	(total_spaces),                 1           ])
+stats.append(['Models',               	    (total_models),                 1           ])
+stats.append(['Explores',             	    (total_explores),               5           ])
+stats.append(['Dimensions',           	    (total_dimensions),				2			])
+stats.append(['Liquid Dimensions',          (total_liquid_dimensions),		10			])
+stats.append(['Measures', 				    (total_measures),				7			])
+stats.append(['Sets', 					    (total_sets),					0			])
+stats.append(['Connections', 				(total_connections),			0			])
+stats.append(['Looks', 					    (total_looks),					8			])
+stats.append(['Look Dynamic Fields', 		(total_dynamic_fields),			10			])
+stats.append(['Dashboards', 				(total_dashboards),				9			])
+stats.append(['Dashboards Elements', 		(total_dashboard_elements),		9			])
+stats.append(['DataGroups', 				(total_datagroups),				2			])
+stats.append(['Groups', 					(total_groups),					2			])
+stats.append(['Users Groups', 		        (total_users_in_groups),		2			])
+stats.append(['Users', 					    (total_users),					2			])
+stats.append(['Roles', 					    (total_roles),					2			])
+stats.append(['User Attributes', 			(total_user_attributes),		10			])
+stats.append(['total Views', 			    (len(distinct_views)),			2			])
+#stats.append(['Distinct Views', 			(len(distinct_views)),			2			])
+stats.append(['Always Filters', 			(total_always_filter),			2			])
+stats.append(['Locales', 					(total_locales),				2			])
 
 path = 'data_dictionary.xlsx'
 
@@ -1869,38 +1474,21 @@ m = []
 for i in range(0, len(n)- 1):
     if i > 0:
         m.append(n[i]) 
-#for row in m :
 
-    #print(row)
 rez = [[m[j][i] for j in range(len(m))] for i in range(len(m[0]))]
-print("\n")
-
 
 writer = pd.ExcelWriter(path, engine='xlsxwriter')
-
-# Create a Pandas dataframe from the data.
-#df = pd.DataFrame({'': []})
-
-# Convert the dataframe to an XlsxWriter Excel object.
-#df.to_excel(writer, sheet_name='Stats')
 
 df = pd.DataFrame({'': []})
 
 workbook  = writer.book
-
 df.to_excel(writer, sheet_name='Sheet1')
 
 worksheet = writer.sheets['Sheet1']
 worksheet.name = "Stats"
 
-
-# Add a format for the headings.
 bold = workbook.add_format({'bold': True})
-
-# Add the worksheet data that the charts will refer to.
-#["Art", "Projects", "Models"],
 headings = ['Artifacts', 'Count', 'Complexity']
-
 
 data = rez
 
@@ -1909,22 +1497,14 @@ worksheet.write_column('A2', data[0])
 worksheet.write_column('B2', data[1])
 worksheet.write_column('C2', data[2])
 
-# Create a new column chart. This will use this as the primary chart.
 column_chart2 = workbook.add_chart({'type': 'column'})
-
-# Configure the data series for the primary chart.
 column_chart2.add_series({
     'name':       '=Stats!$B$1',
     'categories': '=Stats!$A$2:$A$22',
     'values':     '=Stats!$B$2:$B$22',
 })
 
-# Create a new column chart. This will use this as the secondary chart.
 line_chart2 = workbook.add_chart({'type': 'line'})
-
-# Configure the data series for the secondary chart. We also set a
-# secondary Y axis via (y2_axis). This is the only difference between
-# this and the first example, apart from the axis label below.
 line_chart2.add_series({
     'name':       '=Stats!$C$1',
     'categories': '=Stats!$A$2:$A$22',
@@ -1932,26 +1512,16 @@ line_chart2.add_series({
     'y2_axis':    True,
 })
 
-# Combine the charts.
 column_chart2.combine(line_chart2)
 
-# Add a chart title and some axis labels.
 column_chart2.set_title({  'name': 'Looker Sigma Complexity'})
 column_chart2.set_x_axis({ 'name': 'Artifacts'})
 column_chart2.set_y_axis({ 'name': 'Counts'})
 
 column_chart2.set_size({'width': 900, 'height': 500})
-# Note: the y2 properties are on the secondary chart.
 line_chart2.set_y2_axis({'name': 'Complexity'})
 
-# Insert the chart into the worksheet
 worksheet.insert_chart('F1', column_chart2)
-
-
-df = pd.DataFrame(stats)
-df.to_excel(writer, sheet_name = "Data")
-
-
 
 modelDict = pd.DataFrame(model_DictList)
 exploreDict = pd.DataFrame(explore_DictList)
@@ -1965,7 +1535,6 @@ filterDict = pd.DataFrame(filters_DictList)
 alwaysFilterDict = pd.DataFrame(always_filter_DictList)
 connectionList = pd.DataFrame(conDictList) 
 allDashboardList = pd.DataFrame(dashboardDictList)
-dashboardList = pd.DataFrame(dash_DictList)
 dashelementList = pd.DataFrame(dashElementDictList)
 dimensionList = pd.DataFrame(dimension_DictList)
 liquidDimensionList = pd.DataFrame(liquid_dimension_DictList)
@@ -1977,43 +1546,40 @@ singlelooksList = pd.DataFrame(s_looks_DictList)
 looksList = pd.DataFrame(looks_DictList)
 projectsList = pd.DataFrame(projects_DictList)
 allGroupsList = pd.DataFrame(group_DictList)
-singleRoleUserList = pd.DataFrame(r_users_DictList)
 spacesList = pd.DataFrame(spacesDictList)
 userAttributeList = pd.DataFrame(user_attr_DictList)
 userList = pd.DataFrame(userDictList)
-viewsList = pd.DataFrame(view_DictList)
+viewsList = pd.DataFrame({"Views": distinct_views})
 measureList = pd.DataFrame(measure_DictList)
 
 
-projectsList.to_excel(writer,sheet_name='projects')
-looksList.to_excel(writer,sheet_name='Looks')
-modelDict.to_excel(writer,sheet_name='models')
-allGroupsList.to_excel(writer,sheet_name='all_groups')
-userList.to_excel(writer,sheet_name='all_users')
-singleRoleUserList.to_excel(writer,sheet_name='single_user')
-spacesList.to_excel(writer,sheet_name='spaces')
-userAttributeList.to_excel(writer,sheet_name='user_attribute')
-exploreDict.to_excel(writer,sheet_name='explore')
-aliasesDict.to_excel(writer,sheet_name='aliases')
-setsDict.to_excel(writer,sheet_name='sets')
-dimensionDict.to_excel(writer,sheet_name='dimension')
-liquidDimensionList.to_excel(writer,sheet_name='liquid_dimension')
-parameterDict.to_excel(writer,sheet_name='parameter')
-joinDict.to_excel(writer,sheet_name='joins')
-measureTypeList.to_excel(writer,sheet_name='measure_type')
-filterDict.to_excel(writer,sheet_name='filters')
-alwaysFilterDict.to_excel(writer,sheet_name='always_filter')
-allDashboardList.to_excel(writer,sheet_name='all_Dashboards')
-dashboardList.to_excel(writer,sheet_name='dashboard')
-dashelementList.to_excel(writer,sheet_name='dashboard_element')
-connectionList.to_excel(writer,sheet_name='connections')
-dimensionList.to_excel(writer,sheet_name='dimension_List')
-datagroupsList.to_excel(writer,sheet_name='all_data_groups')
-groupUserList.to_excel(writer,sheet_name='single_group_User')
-rolesList.to_excel(writer,sheet_name='roles')
-localesList.to_excel(writer,sheet_name='locales')
-singlelooksList.to_excel(writer,sheet_name='single_look')
-viewsList.to_excel(writer,sheet_name='views')
-measureList.to_excel(writer,sheet_name="measure")
+projectsList.to_excel(writer,sheet_name='Projects',index=False)
+looksList.to_excel(writer,sheet_name='Looks',index=False)
+modelDict.to_excel(writer,sheet_name='Models',index=False)
+allGroupsList.to_excel(writer,sheet_name='Groups',index=False)
+userList.to_excel(writer,sheet_name='Users',index=False)
+spacesList.to_excel(writer,sheet_name='Spaces',index=False)
+userAttributeList.to_excel(writer,sheet_name='User Attribute',index=False)
+exploreDict.to_excel(writer,sheet_name='Explore',index=False)
+aliasesDict.to_excel(writer,sheet_name='Aliases',index=False)
+setsDict.to_excel(writer,sheet_name='Sets',index=False)
+dimensionDict.to_excel(writer,sheet_name='Dimension',index=False)
+liquidDimensionList.to_excel(writer,sheet_name='Liquid Dimension',index=False)
+parameterDict.to_excel(writer,sheet_name='Parameter',index=False)
+joinDict.to_excel(writer,sheet_name='Joins',index=False)
+measureTypeList.to_excel(writer,sheet_name='Measure_Type',index=False)
+filterDict.to_excel(writer,sheet_name='Filters',index=False)
+alwaysFilterDict.to_excel(writer,sheet_name='Always Filter',index=False)
+allDashboardList.to_excel(writer,sheet_name='Dashboards',index=False)
+dashelementList.to_excel(writer,sheet_name='Dashboard Element',index=False)
+connectionList.to_excel(writer,sheet_name='Connections',index=False)
+dimensionList.to_excel(writer,sheet_name='Dimension List',index=False)
+datagroupsList.to_excel(writer,sheet_name='Data Groups',index=False)
+groupUserList.to_excel(writer,sheet_name='User Group',index=False)
+rolesList.to_excel(writer,sheet_name='Roles',index=False)
+localesList.to_excel(writer,sheet_name='Locales',index=False)
+singlelooksList.to_excel(writer,sheet_name='Single look',index=False)
+viewsList.to_excel(writer,sheet_name='Views',index=False)
+measureList.to_excel(writer,sheet_name="Measure",index=False)
 
 writer.save()
