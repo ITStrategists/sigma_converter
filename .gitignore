@@ -1,6 +1,6 @@
-
 target/
 dbt_modules/
 logs/
 data/
 models/
+python/*.xlsx
