@@ -1,18 +1,15 @@
-converter:
+sigma_me:
   target: dev
   outputs:
     dev:
       type: snowflake
-      account: itstrategists.east-us-2.azure
-
-      # User/password auth
-      user: TUSMAN
-      password: Sunny321!!
-
-      role: SYSADMIN
-      database: SIGMA_CONVERTER
-      warehouse: TAYYAB_WH
-      schema: DBT
+      host: "{{ env_var('SIGMA_ME_DB_HOST') }}"
+      user: "{{ env_var('SIGMA_ME_DB_USER') }}"
+      password: "{{ env_var('SIGMA_ME_DB_PASS') }}"
+      role: "{{ env_var('SIGMA_ME_ROLE') }}"
+      database: "{{ env_var('SIGMA_ME_DB_NAME') }}"
+      warehouse: "{{ env_var('SIGMA_ME_WAREHOUSE') }}"
+      schema: "{{ env_var('SIGMA_ME_SCHEMA') }}"
+      query_tag: "{{ env_var('SIGMA_ME_QUERY_TAG') }}"
       threads: 1
-      client_session_keep_alive: False
-      query_tag: DBT 
+      keepalives_idle: 0 # default 0, indicating the system default
