@@ -4,3 +4,4 @@ logs/
 data/
 models/
 python/*.xlsx
+python/*.ini
