@@ -68,6 +68,7 @@ dashElementDictList = []
 dash_DictList = []
 measure_DictList = []
 
+
 #----------------------------------------- Explore Model ~Start -------------------------------------------------------
 for model in models:
 
@@ -93,7 +94,12 @@ for model in models:
 #----------------------------------------- explore  ~start ---------------------------------------------------------
 
     for explore in model.explores:
-        print("Tryging ... {}:{}".format(model.name, explore.name))
+
+        if model.name == 'snowflake_poc':
+            continue
+
+        print("Trying ... {}:{}".format(model.name, explore.name))
+
         exploreObj = sdk.lookml_model_explore(lookml_model_name=model.name,explore_name=explore.name)
         print(exploreObj.id)
         exploreObj.aliases
@@ -471,6 +477,7 @@ for model in models:
 
 #----------------------------------------- Dashboard Element ~Start -------------------------------------------------------
 
+
 s_dashboard = sdk.all_dashboards()
 
 for dash in s_dashboard:
@@ -554,43 +561,43 @@ for dash in s_dashboard:
             "refresh_interval":{} if dash_element.query is None else dash_element.refresh_interval,
             "refresh_interval_to_i":dash_element.refresh_interval_to_i,
 
-            "result_maker_dynamic_fields":dash_element.result_maker.dynamic_fields,
-            "result_maker_sorts":dash_element.result_maker.sorts,
-            "result_maker_merge_result_id":dash_element.result_maker.merge_result_id,
-            "result_maker_total":dash_element.result_maker.total,
-            "result_maker_query_id":dash_element.result_maker.query_id,
-            "result_maker_sql_query_id":dash_element.result_maker.sql_query_id,
+            "result_maker_dynamic_fields":None if dash_element.result_maker is None else dash_element.result_maker.dynamic_fields,
+            "result_maker_sorts":None if dash_element.result_maker is None else dash_element.result_maker.sorts,
+            "result_maker_merge_result_id":None if dash_element.result_maker is None else dash_element.result_maker.merge_result_id,
+            "result_maker_total":None if dash_element.result_maker is None else dash_element.result_maker.total,
+            "result_maker_query_id":None if dash_element.result_maker is None else dash_element.result_maker.query_id,
+            "result_maker_sql_query_id":None if dash_element.result_maker is None else dash_element.result_maker.sql_query_id,
             
-            "result_maker_query_model":dash_element.result_maker.query.model,
-            "result_maker_query_view":dash_element.result_maker.query.view,
-            "result_maker_query_can":dash_element.result_maker.query.can,
+            "result_maker_query_model":None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.model,
+            "result_maker_query_view":None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.view,
+            "result_maker_query_can":None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.can,
 
-            "result_maker_query_fields" : dash_element.result_maker.query.fields,
+            "result_maker_query_fields" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.fields,
 
-            "result_maker_query_pivots" : dash_element.result_maker.query.pivots,
-            "result_maker_query_fill_fields" : dash_element.result_maker.query.fill_fields,
-            "result_maker_query_filters" : dash_element.result_maker.query.filters,
-            "result_maker_query_filter_expression" : dash_element.result_maker.query.filter_expression,
-            "result_maker_query_sorts" : dash_element.result_maker.query.sorts,
-            "result_maker_query_limit" : dash_element.result_maker.query.limit,
-            "result_maker_query_column_limit" : dash_element.result_maker.query.column_limit,
-            "result_maker_query_total" : dash_element.result_maker.query.total,
-            "result_maker_query_row_total" : dash_element.result_maker.query.row_total,
-            "result_maker_query_subtotals" : dash_element.result_maker.query.subtotals,
-            "result_maker_query_vis_config" : dash_element.result_maker.query.vis_config,
-            "result_maker_query_filter_config" : dash_element.result_maker.query.filter_config,
-            "result_maker_query_visible_ui_sections" : dash_element.result_maker.query.visible_ui_sections,
-            "result_maker_query_slug" : dash_element.result_maker.query.slug,
-            "result_maker_query_dynamic_fields" : dash_element.result_maker.query.dynamic_fields,
-            "result_maker_query_client_id" : dash_element.result_maker.query.client_id,
-            "result_maker_query_share_url" : dash_element.result_maker.query.share_url,
-            "result_maker_query_expanded_share_url" : dash_element.result_maker.query.expanded_share_url,
-            "result_maker_query_url" : dash_element.result_maker.query.url,
-            "result_maker_query_query_timezone" : dash_element.result_maker.query.query_timezone,
-            "result_maker_query_has_table_calculations" : dash_element.result_maker.query.has_table_calculations,
-            "result_maker_query_runtime" : dash_element.result_maker.query.runtime,
+            "result_maker_query_pivots" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.pivots,
+            "result_maker_query_fill_fields" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.fill_fields,
+            "result_maker_query_filters" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.filters,
+            "result_maker_query_filter_expression" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.filter_expression,
+            "result_maker_query_sorts" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.sorts,
+            "result_maker_query_limit" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.limit,
+            "result_maker_query_column_limit" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.column_limit,
+            "result_maker_query_total" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.total,
+            "result_maker_query_row_total" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.row_total,
+            "result_maker_query_subtotals" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.subtotals,
+            "result_maker_query_vis_config" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.vis_config,
+            "result_maker_query_filter_config" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.filter_config,
+            "result_maker_query_visible_ui_sections" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.visible_ui_sections,
+            "result_maker_query_slug" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.slug,
+            "result_maker_query_dynamic_fields" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.dynamic_fields,
+            "result_maker_query_client_id" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.client_id,
+            "result_maker_query_share_url" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.share_url,
+            "result_maker_query_expanded_share_url" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.expanded_share_url,
+            "result_maker_query_url" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.url,
+            "result_maker_query_query_timezone" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.query_timezone,
+            "result_maker_query_has_table_calculations" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.has_table_calculations,
+            "result_maker_query_runtime" : None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.query.runtime,
             
-            "result_maker_sql_vis_config":dash_element.result_maker.vis_config,
+            "result_maker_sql_vis_config":None if dash_element.result_maker is None or dash_element.result_maker.query is None else dash_element.result_maker.vis_config,
 
             "result_maker_id":dash_element.result_maker_id,
             "subtitle_text":dash_element.subtitle_text,
@@ -601,12 +608,14 @@ for dash in s_dashboard:
             "alert_count":dash_element.alert_count,
             "title_text_as_html":dash_element.title_text_as_html,
             "subtitle_text_as_html":dash_element.subtitle_text_as_html,
-            "filterables":dash_element.result_maker.filterables,
+            "filterables":None if dash_element.result_maker is None else dash_element.result_maker.filterables,
         }
         dashElementDictList.append(data_groupsDict)
         total_dashboard_elements = total_dashboard_elements + 1
-        if str(dash_element.result_maker.query.dynamic_fields) is not None and str(dash_element.result_maker.query.dynamic_fields) != '{}' and str(dash_element.result_maker.query.dynamic_fields) != '[]' and str(dash_element.result_maker.query.dynamic_fields) != 'None':
-            total_dynamic_fields = total_dynamic_fields + 1
+        if dash_element.result_maker is not None and dash_element.result_maker.query is not None:
+        
+            if str(dash_element.result_maker.query.dynamic_fields) is not None and str(dash_element.result_maker.query.dynamic_fields) != '{}' and str(dash_element.result_maker.query.dynamic_fields) != '[]' and str(dash_element.result_maker.query.dynamic_fields) != 'None':
+                total_dynamic_fields = total_dynamic_fields + 1
 
 #----------------------------------------- Dashboard Element ~End ---------------------------------------------------------
 
@@ -837,7 +846,7 @@ for group in groups:
             "role_ids" : user.role_ids,
             "sessions" : user.sessions,
 
-            "ui_state_homepageGroupIdPreference" : {} if user.ui_state is None else user.ui_state["homepageGroupIdPreference"],
+            "ui_state_homepageGroupIdPreference" : {} if user.ui_state is None or 'homepageGroupIdPreference' not in user.ui_state else user.ui_state["homepageGroupIdPreference"],
 
             "verified_looker_employee" : user.verified_looker_employee,
             "roles_externally_managed" : user.roles_externally_managed,
@@ -945,6 +954,8 @@ for locale in locales:
 #print(data_groups_DataFrame)
 
 #-----------------------------------------Single Look ~Start -------------------------------------------------------
+
+
 
 looks = sdk.all_looks()
 for look in looks:
@@ -1072,11 +1083,7 @@ for look in looks:
         "query_fields" : s_look.query.fields,
         "query_pivots" : s_look.query.pivots,
         "query_fill_fields" : s_look.query.fill_fields,
-
-        "query_filters_order_items.created_date" : None if 'order_items.created_date' not in s_look.query.filters else str(s_look.query.filters["order_items.created_date"]),
-        "query_filters_users.country" : None if 'users.country' not in s_look.query.filters else s_look.query.filters["users.country"],
-        "query_filters_users.state" : None if 'users.state' not in s_look.query.filters else s_look.query.filters["users.state"],
-        "query_filters_users.city" : None if 'users.city' not in s_look.query.filters else s_look.query.filters["users.city"],
+        "query_filters": s_look.query.filters,
 
         "query_filter_expression" : s_look.query.filter_expression,
         "query_sorts" : s_look.query.sorts,
@@ -1370,7 +1377,6 @@ for user_attribute in user_attributes:
 #--------------------------------------------All Users-Start---#-----------------------------------------
 
 
-
 users = sdk.all_users()
 for user in users:
     userDict = {
@@ -1428,9 +1434,7 @@ for user in users:
         "allow_normal_group_membership" : user.allow_normal_group_membership,
         "allow_roles_from_normal_groups" : user.allow_roles_from_normal_groups,
         "url" : user.url,
-        "ui_state_homepageGroupIdPreference" : None if user.ui_state is None else user.ui_state["homepageGroupIdPreference"],
-
-       
+        "ui_state_homepageGroupIdPreference" : {} if user.ui_state is None or 'homepageGroupIdPreference' not in user.ui_state else user.ui_state["homepageGroupIdPreference"],       
     }
     userDictList.append(userDict)
   
@@ -1440,6 +1444,8 @@ for user in users:
 #########################################--All Users-End--##################################
 
 
+'''
+#                                               OLD ONE.
 stats = []
 stats.append(['Artifact Name',               'Count',                  'complexity'     ,'Estimate (Hours)'                     ])
 stats.append(['Projects',               	(total_projects),               1           , 4 * (total_projects) * 1              ])
@@ -1527,6 +1533,271 @@ line_chart2.set_y2_axis({'name': 'Complexity'})
 
 worksheet.insert_chart('F1', column_chart2)
 
+modelDict = pd.DataFrame(model_DictList)
+exploreDict = pd.DataFrame(explore_DictList)
+aliasesDict = pd.DataFrame(aliases_DictList)
+setsDict = pd.DataFrame(sets_DictList)
+dimensionDict = pd.DataFrame(dimension_DictList)
+parameterDict = pd.DataFrame(parameter_DictList)
+joinDict = pd.DataFrame(joins_DictList)
+measureTypeList = pd.DataFrame(measure_type_DictList)
+filterDict = pd.DataFrame(filters_DictList)
+alwaysFilterDict = pd.DataFrame(always_filter_DictList)
+connectionList = pd.DataFrame(conDictList) 
+allDashboardList = pd.DataFrame(dashboardDictList)
+dashelementList = pd.DataFrame(dashElementDictList)
+dimensionList = pd.DataFrame(dimension_DictList)
+liquidDimensionList = pd.DataFrame(liquid_dimension_DictList)
+groupUserList = pd.DataFrame(groups_DictList)
+datagroupsList = pd.DataFrame(data_groups_DictList)
+rolesList = pd.DataFrame(roles_DictList)
+localesList = pd.DataFrame(locales_DictList)
+singlelooksList = pd.DataFrame(s_looks_DictList)
+looksList = pd.DataFrame(looks_DictList)
+projectsList = pd.DataFrame(projects_DictList)
+allGroupsList = pd.DataFrame(group_DictList)
+spacesList = pd.DataFrame(spacesDictList)
+userAttributeList = pd.DataFrame(user_attr_DictList)
+userList = pd.DataFrame(userDictList)
+viewsList = pd.DataFrame({"Views": distinct_views})
+measureList = pd.DataFrame(measure_DictList)
+
+
+projectsList.to_excel(writer,sheet_name='Projects',index=False)
+looksList.to_excel(writer,sheet_name='Looks',index=False)
+modelDict.to_excel(writer,sheet_name='Models',index=False)
+allGroupsList.to_excel(writer,sheet_name='Groups',index=False)
+userList.to_excel(writer,sheet_name='Users',index=False)
+spacesList.to_excel(writer,sheet_name='Spaces',index=False)
+userAttributeList.to_excel(writer,sheet_name='User Attribute',index=False)
+exploreDict.to_excel(writer,sheet_name='Explore',index=False)
+aliasesDict.to_excel(writer,sheet_name='Aliases',index=False)
+setsDict.to_excel(writer,sheet_name='Sets',index=False)
+dimensionDict.to_excel(writer,sheet_name='Dimension',index=False)
+liquidDimensionList.to_excel(writer,sheet_name='Liquid Dimension',index=False)
+parameterDict.to_excel(writer,sheet_name='Parameter',index=False)
+joinDict.to_excel(writer,sheet_name='Joins',index=False)
+measureTypeList.to_excel(writer,sheet_name='Measure_Type',index=False)
+filterDict.to_excel(writer,sheet_name='Filters',index=False)
+alwaysFilterDict.to_excel(writer,sheet_name='Always Filter',index=False)
+allDashboardList.to_excel(writer,sheet_name='Dashboards',index=False)
+dashelementList.to_excel(writer,sheet_name='Dashboard Element',index=False)
+connectionList.to_excel(writer,sheet_name='Connections',index=False)
+dimensionList.to_excel(writer,sheet_name='Dimension List',index=False)
+datagroupsList.to_excel(writer,sheet_name='Data Groups',index=False)
+groupUserList.to_excel(writer,sheet_name='User Group',index=False)
+rolesList.to_excel(writer,sheet_name='Roles',index=False)
+localesList.to_excel(writer,sheet_name='Locales',index=False)
+singlelooksList.to_excel(writer,sheet_name='Single look',index=False)
+viewsList.to_excel(writer,sheet_name='Views',index=False)
+measureList.to_excel(writer,sheet_name="Measure",index=False)
+
+writer.save()
+
+'''
+
+
+#----------------------- Data ------------------------
+stats = []
+stats.append(['Artifact Name',               'Count',                  'complexity'     ,'Estimate (Hours)'                    , 'After complexity' , 'After Estimate (Hours)' ,])
+stats.append(['Projects',               	(total_projects),               1           , 4 * (total_projects) * 1              ,       1           ,       4 * (total_projects) * 1             ])
+stats.append(['Spaces',                 	(total_spaces),                 1           , 4 * (total_spaces) * 1                ,       1           ,       4 * (total_spaces) * 1              ])
+stats.append(['Models',               	    (total_models),                 1           , 4 * (total_models) * 1                ,       1           ,       4 * (total_models) * 1               ])
+stats.append(['Explores',             	    (total_explores),               7           , 0.25 * (total_explores) * 7           ,       7           ,       0.25 * (total_explores) * 7              ])
+stats.append(['Dimensions',           	    (total_dimensions),				1			, 0.01 * (total_dimensions) * 1         ,       7           ,       0.01 * (total_dimensions) * 7               ])
+stats.append(['Liquid Dimensions',          (total_liquid_dimensions),		10			, 0 * (total_liquid_dimensions) * 10    ,       10          ,       0 * (total_liquid_dimensions) * 10               ])
+stats.append(['Measures', 				    (total_measures),				7			, 0.02 * (total_measures) * 7           ,       7           ,       0.02 * (total_measures) * 7               ]) 
+stats.append(['Sets', 					    (total_sets),					0			, 0 * (total_sets) * 0                  ,       0           ,       0 * (total_sets) * 0                ])
+stats.append(['Connections', 				(total_connections),			0			, 0 * (total_connections) * 0           ,       0           ,       0 * (total_connections) * 0               ])
+stats.append(['Looks', 					    (total_looks),					8			, 0.15 * (total_looks) * 7          ,       8               ,       0.15 * (total_looks) * 7                 ])
+stats.append(['Look Dynamic Fields', 		(total_dynamic_fields),			10			, 0 * (total_dynamic_fields) * 10       ,       10          ,       0 * (total_dynamic_fields) * 10                ])
+stats.append(['Dashboards', 				(total_dashboards),				7			, 0.25 * (total_dashboards) * 7         ,       7           ,       0.25 * (total_dashboards) * 7                ])
+stats.append(['Dashboards Elements', 		(total_dashboard_elements),		7			, 0.15 * (total_dashboard_elements) * 7 ,       7           ,       0.15 * (total_dashboard_elements) * 7               ])
+stats.append(['DataGroups', 				(total_datagroups),				2			, 1 * (total_datagroups) * 2            ,       2           ,       1 * (total_datagroups) * 2              ])
+stats.append(['Groups', 					(total_groups),					1			, 0.01 * (total_groups) * 1             ,       1           ,       0.01 * (total_groups) * 1              ])
+stats.append(['Users Groups', 		        (total_users_in_groups),		2			, 0.01 * (total_users_in_groups) * 2    ,       2           ,       0.01 * (total_users_in_groups) * 2               ])
+stats.append(['Users', 					    (total_users),					2			, 0.01 * (total_users) * 2          ,       2               ,       0.01 * (total_users) * 2               ])
+stats.append(['Roles', 					    (total_roles),					2			, 0.01 * (total_roles) * 2          ,       2               ,       0.01 * (total_roles) * 2               ])
+stats.append(['User Attributes', 			(total_user_attributes),		10			, 0 * (total_user_attributes) * 10      ,       10          ,       0 * (total_user_attributes) * 10                ])
+stats.append(['total Views', 			    (len(distinct_views)),			2			, 0.3 * (len(distinct_views)) * 2       ,       2           ,       0.3 * (len(distinct_views)) * 2               ])
+stats.append(['Always Filters', 			(total_always_filter),			2			, 0.5 * (total_always_filter) * 2       ,       2           ,       0.5 * (total_always_filter) * 2               ])
+stats.append(['Locales', 					(total_locales),				10			, 0 * (total_locales) * 10              ,       10          ,       0 * (total_locales) * 10               ])
+
+
+#------------------------ Data End --------------------
+
+n = stats
+i = 0
+m = []
+for i in range(0, len(n)- 1):
+    if i > 0:
+        m.append(n[i]) 
+
+rez = [[m[j][i] for j in range(len(m))] for i in range(len(m[0]))]
+
+path = 'data_dictionary.xlsx'
+
+n = stats
+i = 0
+m = []
+for i in range(0, len(n)- 1):
+    if i > 0:
+        m.append(n[i]) 
+
+rez = [[m[j][i] for j in range(len(m))] for i in range(len(m[0]))]
+
+writer = pd.ExcelWriter(path, engine='xlsxwriter')
+
+df = pd.DataFrame({'': []})
+
+workbook  = writer.book
+df.to_excel(writer, sheet_name='Sheet1')
+
+worksheet = writer.sheets['Sheet1']
+worksheet.name = "Stats"
+
+bold = workbook.add_format({'bold': True})
+headings = ['Artifacts', 'Count', 'Complexity','Estimate (Hours)', 'After Complexity','After Estimate (Hours)',"Estimated (Weeks)" ]
+
+data = rez
+
+hours = ["=ROUND(SUM(D2:D22) / (8 * 5), 0)"]
+
+#---------------------------------------Writing data to Excel Column ------------------------------------------- 
+
+worksheet.write_row('A1', headings, bold)
+worksheet.write_column('A2', data[0])
+worksheet.write_column('B2', data[1])
+worksheet.write_column('C2', data[2])
+worksheet.write_column('D2', data[3])
+worksheet.write_column('E2', data[4])
+worksheet.write_column('F2', data[5])
+worksheet.write_column('G2', hours)
+
+#------------------------------------------1st Line and  Column Char ------------------------------------
+
+
+#-----------------------------Add x-axis 'Count' in Chart Column----------------------------------
+
+column_chart2 = workbook.add_chart({'type': 'column'})
+column_chart2.add_series({
+    'name':       '=Stats!$B$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$B$2:$B$22',
+    
+})
+#--------------------------Add y-axis 'Complexity' in Chart Line ---------------------------------
+
+line_chart2 = workbook.add_chart({'type': 'line'})
+line_chart2.add_series({
+    'name':       '=Stats!$C$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$C$2:$C$22',
+    'y2_axis':    True,
+})
+
+column_chart2.combine(line_chart2)
+
+column_chart2.set_title({  'name': 'Looker Sigma Complexity'})
+column_chart2.set_x_axis({ 'name': 'Artifacts'})
+column_chart2.set_y_axis({ 'name': 'Counts'})
+
+column_chart2.set_size({'width': 900, 'height': 500})
+line_chart2.set_y2_axis({'name': 'Complexity'})
+
+worksheet.insert_chart('H1', column_chart2)
+
+
+#------------------------------------------2nd Line and Column Chart -----------------------------------
+
+#-----------------------------Add x-axis 'Count' in Chart Column----------------------------------
+
+column_chart3 = workbook.add_chart({'type': 'column'})
+column_chart3.add_series({
+    'name':       '=Stats!$B$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$B$2:$B$22',
+    
+})
+
+
+
+#--------------------------Add y-axis 'Complexity' in Chart Line ---------------------------------
+
+line_chart3 = workbook.add_chart({'type': 'line'})
+line_chart3.add_series({
+    'name':       '=Stats!$C$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$C$2:$C$22',
+    'y2_axis':    True,
+   
+})
+#--------------------------Add y-axis 'After Complexity' in Chart Line ----------------------------
+
+line_chart3.add_series({
+    'name':       '=Stats!$E$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$E$2:$E$22',
+    'y2_axis':    True,
+  
+})
+
+column_chart3.combine(line_chart3)
+
+
+column_chart3.set_title({  'name': 'Compare before and after complexity'})
+column_chart3.set_x_axis({ 'name': 'Artifacts'})
+column_chart3.set_y_axis({ 'name': 'Counts'})
+
+column_chart3.set_size({'width': 900, 'height': 500})
+
+line_chart3.set_y2_axis({'name': 'After Complexity'})
+
+worksheet.insert_chart('F30', column_chart3)
+
+#------------------------------------------3rd Line Chart -----------------------------------
+
+
+
+
+#--------------------------Add y-axis 'Estimate (Hours)' in Chart Line ----------------------------
+column_chart5 = workbook.add_chart({'type': 'column'})
+column_chart5.add_series({
+    'name':       '=Stats!$B$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$B$2:$B$22',
+    
+})
+#--------------------------Add y-axis 'Estimate (Hours)' in Chart Line ----------------------------
+line_chart5 = workbook.add_chart({'type': 'line'})
+line_chart5.add_series({
+    'name':       '=Stats!$D$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$D$2:$D$22',
+    'y2_axis':    True,
+  
+})
+#--------------------------Add y-axis 'After Estimate (Hours)' in Chart Line ----------------------------
+line_chart5.add_series({
+    'name':       '=Stats!$F$1',
+    'categories': '=Stats!$A$2:$A$22',
+    'values':     '=Stats!$F$2:$F$22',
+    'y2_axis':    True,
+  
+})
+
+column_chart5.combine(line_chart5)
+
+column_chart5.set_title({  'name': 'Before and After Hours Estimater'})
+column_chart5.set_x_axis({ 'name': 'Artifacts'})
+column_chart5.set_y_axis({ 'name': 'Counts'})
+
+column_chart5.set_size({'width': 900, 'height': 500})
+
+column_chart5.set_y2_axis({'name': 'Hours'})
+
+worksheet.insert_chart('F57', column_chart5)
+#--------------------------------------------------------------------------------------------
 modelDict = pd.DataFrame(model_DictList)
 exploreDict = pd.DataFrame(explore_DictList)
 aliasesDict = pd.DataFrame(aliases_DictList)
