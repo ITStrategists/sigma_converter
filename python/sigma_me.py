@@ -4,6 +4,9 @@ from logger import Logger
 from view import View
 import os
 import re
+import glob
+
+
 
 class Model:
     def __init__(self):
@@ -12,6 +15,7 @@ class Model:
         self.connection = None
         self.label = None
         self.includes = None
+        self.modelFileInformation = None
 
     def setModel(self, model):
         source_schema_initial = os.getenv('SIGMA_ME_SCHEMA')
@@ -36,7 +40,8 @@ class Model:
             Database Name       :        {databaseName}
             SchemaName          :        {schemaName}
             includes            :        {includes}
-            """.format(label = self.label, connectionName = self.connectionName, databaseName = self.connection.getDatabaseName(), schemaName = self.connection.getSchemaName(), name = self.name, includes = self.includes)
+            Model File          :        {modelFileInformation}
+            """.format(label = self.label, connectionName = self.connectionName, databaseName = self.connection.getDatabaseName(), schemaName = self.connection.getSchemaName(), name = self.name, includes = self.includes, modelFileInformation = self.modelFileInformation)
 
 logging = Logger().getLogger()
 
@@ -44,18 +49,19 @@ logging = Logger().getLogger()
 def getFiles(dir, filesIncluded):
     filesList = []
     for dirName, subdirList, fileList in os.walk(dir):
-        for fname in fileList:
-            for fileIncluded in filesIncluded:
-                fileIncluded = fileIncluded.replace('*.', '.*.')
-                rx = re.compile(fileIncluded)
-                filePath = '{}{}'.format(dirName, fname)
-                if rx.match(filePath):    
-                    modelFilesDict = {
-                        "FileName" : fname,
-                        "DirName"  : dirName,
-                    }
-
-                    filesList.append(modelFilesDict)
+        for subdir in subdirList:
+            for fname in fileList:
+                for fileIncluded in filesIncluded:
+                    fileIncluded = fileIncluded.replace('*.', '.*.')
+                    rx = re.compile(fileIncluded)
+                    filePath = '{}{}'.format(dirName, fname)
+                    if rx.match(filePath):    
+                        modelFilesDict = {
+                            "FileName" : fname,
+                            "DirName"  : dirName,
+                        }
+                        logging.info('File:{}={}:{}:{}'.format(fname, dirName, subdir, fname))
+                        filesList.append(modelFilesDict)
 
     return filesList
 
@@ -63,42 +69,81 @@ def getFiles(dir, filesIncluded):
 def main():
     source_repo = os.getenv('SIMGA_ME_SOURCE_REPO')
     rootDir = '../data/{}/'.format(source_repo)
-    filesIncluded = ['*.model.lkml']
-    modelFilesList = getFiles(rootDir, filesIncluded)
 
+    dirs = os.walk(rootDir)
+    models_regex = '.*.model.lkml'
+
+    modelFilesList = []
+
+    for dir, sub_dir, files in dirs:
+        for file in files:
+            rx = re.compile(models_regex)
+            filePath = os.path.join(dir, file)
+            if rx.match(filePath):
+                modelFilesList.append(
+                    {
+                        "DirName": dir,
+                        "FileName" : file
+                    }
+                )
     logging.info(modelFilesList)
 
     for modelFileItem in modelFilesList:
-        with open('{}{}'.format(modelFileItem["DirName"], modelFileItem["FileName"]), 'r') as modelFile:
-            modelParsed = lkml.load(modelFile)
+        if modelFileItem['FileName'] != 'adthrive_ds_athena.model.lkml':
+            #print("adthrive_ds_athena.model.lkml")
+            continue
             
+        
+        logging.info("Model To Be Parsed. {}".format(modelFileItem['FileName']))
+
+        modelFilePath = os.path.join(modelFileItem["DirName"], modelFileItem["FileName"]) 
+        with open(modelFilePath, 'r') as modelFile:
+            modelParsed = lkml.load(modelFile)
+            logging.info(modelParsed)
             model = Model()
             model.setModel(modelParsed)
+            model.modelFileInformation = modelFileItem
+            logging.info("-----------------------MODEL-------------------")
             logging.info(model)
             #print(model)
 
             viewList = []
+            viewFileList = []
+            filesNotFound = []
 
-            rootDir = modelFileItem["DirName"]
-            filesIncluded = model.includes
-            viewFilesList = getFiles(rootDir, filesIncluded)
+            for includeItem in model.includes:
+                dir = model.modelFileInformation["DirName"]
+                viewFileName = os.path.join(rootDir, includeItem.split('/', 1)[-1])
+                logging.info(viewFileName)
+                if viewFileName.endswith('view'):
+                    viewFileName = "{}.lkml".format(viewFileName)
+                #logging.info("Checking: {}".format(viewFileName))
+                found = False
+                for name in glob.glob(viewFileName):
+                    #logging.info("ViewFile: {}".format(name))
+                    found = True
+                    viewFileList.append(name)
 
-            logging.info('View----------------------------------')
-            logging.info(viewFilesList)
-            for viewFileItem in viewFilesList:
+                if not found:
+                    filesNotFound.append(includeItem)
+            logging.info("Views to be Parsed: -------------")
+            for viewItem in viewFileList:
+                logging.info(viewItem)
 
-                if viewFileItem['FileName'] != 'order_items.view.lkml' and viewFileItem['FileName'] != 'user_order_facts.view.lkml':
-                    print('')
+            logging.info("Views Not found: -------------")
+            for viewItem in filesNotFound:
+                logging.info(viewItem)
+            
+            for viewFileItem in viewFileList:
+                #if viewFileItem['FileName'] != 'order_items.view.lkml' and viewFileItem['FileName'] != 'user_order_facts.view.lkml':
+                #    print('')
                     #continue
-
-                viewFile = '{}{}'.format(viewFileItem["DirName"], viewFileItem["FileName"])
-                msg = "Parsing: {}".format(viewFile)
+                msg = "Parsing View: {}".format(viewFileItem)
                 logging.info(msg)
                 print(msg)
                 
                 viewObj = View()
-                views = viewObj.getViewInfomationFromFile(viewFile)
-
+                views = viewObj.getViewInfomationFromFile(viewFileItem, logging)
                 for view in views:
                     logging.info("Viewinfo")
                     logging.info(view)
@@ -125,9 +170,9 @@ def main():
                     viewList.append(view)
 
 
-            '''
-            Process VIEWS AND PDTS
-            '''
+            #
+            #Process VIEWS AND PDTS
+            #
 
             for view in viewList:
                 if view.viewType == 'VIEW' or view.viewType == 'PDT':
@@ -137,14 +182,17 @@ def main():
                     view.injectSqlTableName(viewList)
                     view.injectSqlTableNameInSQLTriggerValue(viewList)
                     view.writedbtModel()
-
+            
             print('-----------------------Process NDTs---------------------------------------------- ')
             for view in viewList:
                 if view.viewType == 'NDT':
+                    logging.info("Processing NDT: {}".format(view.name) )
+                    logging.info(view)
                     view.processNDT(viewList)
                     view.getNDTViewSQL()
                     view.setDBTModelName()                    
                     view.writedbtModel()
+
 
 if __name__ == "__main__":
     main()

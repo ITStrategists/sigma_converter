@@ -27,8 +27,9 @@ class Column:
 
         column_ = None
         for column in columns:
-            if column.name == name:
-                column_ = column
+            if column is not None:
+                if column.name == name:
+                    column_ = column
         return column_
 
     def __str__(self):

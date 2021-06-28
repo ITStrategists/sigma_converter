@@ -24,7 +24,8 @@ class View:
         self.exploreSourceName = None
         self.columns = []
         self.exploreSourceView = None
-
+        self.extends = None
+        self.extendedView = None
     def getViewByName(self, viewName, viewList):
         view = None
         for viewItem in viewList:
@@ -36,15 +37,17 @@ class View:
     def processNDTColumns(self, exploreSourceView, columns):
 
         columns_ = []
-        dimension_ = Dimension()
         column = []
-
+        
         for column_ in columns:
+            print(column_)
             if column_.columnType == 'COLUMN':
                 fieldName = column_.transformExploreField(self.exploreSourceName, column_.field)
-                dimension_ = dimension_.getDimensionByName(fieldName, exploreSourceView.allDimensions)
-                column_.sql = dimension_.sql
-                column_.dimensionType = dimension_.dimensionType
+                dimension_temp = Dimension()
+                dimension_temp = dimension_temp.getDimensionByName(fieldName, exploreSourceView.allDimensions)
+                if dimension_temp is not None: 
+                    column_.sql = dimension_temp.sql
+                    column_.dimensionType = dimension_temp.dimensionType()
 
         for column_ in columns:
             if column_.columnType == 'DERIVED_COLUMN':
@@ -69,6 +72,10 @@ class View:
 
         for dimension_ in self.allDimensions:
             column_ = column_.getColumnByName(dimension_.name, columns)
+            if column_ is None:
+                print('Null Column')
+            if dimension_ is None:
+                print('Null dimension')
             dimension_.sql = column_.sql
             dimension_.dimensionType = column_.dimensionType
             
@@ -131,10 +138,11 @@ class View:
 
 
 
-    def setView(self, view):
+    def setView(self, view, logging = None):
 
         if 'derived_table' in view:
-
+            if 'extends__all' in view:
+                self.extends = view['extends__all'][0][0]
             if 'explore_source' in view['derived_table']:
                 self.viewType = 'NDT'
                 exploreSource = view['derived_table']['explore_source']
@@ -338,18 +346,19 @@ class View:
             View Source     :     {exploreSourceName}
             Persisted Type  :     {persistedType}
             Persisted SQL   :     {persistedSQL}
+            Extends         :     {extends}
             SQL             :     {sql}
-            """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL, viewType = self.viewType, exploreSourceName = self.exploreSourceName)
+            """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL, viewType = self.viewType, exploreSourceName = self.exploreSourceName, extends = self.extends)
 
     
-    def getViewInfomationFromFile(self, fileName):
+    def getViewInfomationFromFile(self, fileName, logging = None):
 
         views = []
 
         with open(fileName, 'r') as file:
             parsed = lkml.load(file)
             print(parsed)
-            #logging.info(parsed)
+            logging.info(parsed)
 
             for view in parsed['views']:
 
