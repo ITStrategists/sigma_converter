@@ -65,6 +65,17 @@ def getFiles(dir, filesIncluded):
 
     return filesList
 
+def getFilePath(rootDir, includeItem):
+    viewFileList = []
+    viewFileName = os.path.join(rootDir, includeItem.split('/', 1)[-1])
+    logging.info(viewFileName)
+    if viewFileName.endswith('view'):
+        viewFileName = "{}.lkml".format(viewFileName)
+    #logging.info("Checking: {}".format(viewFileName))
+    for name in glob.glob(viewFileName):
+        #logging.info("ViewFile: {}".format(name))
+        viewFileList.append(name)
+    return viewFileList
 
 def main():
     source_repo = os.getenv('SIMGA_ME_SOURCE_REPO')
@@ -112,6 +123,14 @@ def main():
             filesNotFound = []
 
             for includeItem in model.includes:
+                filesToBeIncluded = getFilePath(rootDir, includeItem)
+                found = False
+                for fileToBeIncluded in filesToBeIncluded:
+                    found = True
+                    viewFileList.append(fileToBeIncluded)
+                if not found:
+                    filesNotFound.append(includeItem)
+                '''
                 dir = model.modelFileInformation["DirName"]
                 viewFileName = os.path.join(rootDir, includeItem.split('/', 1)[-1])
                 logging.info(viewFileName)
@@ -124,12 +143,12 @@ def main():
                     found = True
                     viewFileList.append(name)
 
-                if not found:
-                    filesNotFound.append(includeItem)
+                
+                '''
             logging.info("Views to be Parsed: -------------")
             for viewItem in viewFileList:
                 logging.info(viewItem)
-
+                
             logging.info("Views Not found: -------------")
             for viewItem in filesNotFound:
                 logging.info(viewItem)
@@ -145,29 +164,86 @@ def main():
                 viewObj = View()
                 views = viewObj.getViewInfomationFromFile(viewFileItem, logging)
                 for view in views:
-                    logging.info("Viewinfo")
-                    logging.info(view)
-                    print(view)
-                    
                     view.schemaName = model.connection.schemaName
                     view.databaseName = model.connection.databaseName
                     view.targetSchema = model.name
-
-                    logging.info("-------------------------All Dimensions---------------------------------------------")
-
-                    for dimension_ in view.allDimensions:
-                        logging.info(dimension_)
-
-                    logging.info("-------------------------Valid Dimensions---------------------------------------------")
-
-                    for dimension_ in view.validDimensions:
-                        logging.info(dimension_)
-                    
-                    logging.info("-------------------------Invalid Dimensions---------------------------------------------")
-                    for dimension_ in view.excludedDimensions:
-                        logging.info(dimension_)
-
+                    view.processDimensions()
+                    logging.info('Parsed Views: -------------')
+                    logging.info(view)
                     viewList.append(view)
+
+
+            extendedViewNamesRaw = []
+            extendedViewNames = []
+            for view_ in viewList:
+                for includeView in view_.includes:
+                    if includeView is not None:
+                        for alreadyParsedView in model.includes:
+                            #logging.info("Already Parsed View Compare: {}: {}".format(alreadyParsedView, includeView))
+                            found = False
+                            if alreadyParsedView == includeView:
+                                found = True
+                                break
+                        if not found:
+                            extendedViewNamesRaw.append(includeView)        
+
+            for extendedViewNameRaw in extendedViewNamesRaw:
+                found = False
+                for extendedViewName in extendedViewNames:
+                    if extendedViewName == extendedViewNameRaw:
+                        found = True
+                        break
+                if not found:
+                    extendedViewNames.append(extendedViewNameRaw)
+
+            extendViewFiles = []
+            extendedFilesNotFound = []
+            for extendedViewName in extendedViewNames:
+                filesToBeIncluded = getFilePath(rootDir, extendedViewName)
+                found = False
+                for fileToBeIncluded in filesToBeIncluded:
+                    found = True
+                    extendViewFiles.append(fileToBeIncluded)
+                if not found:
+                    extendedFilesNotFound.append(extendedViewName)
+
+            for viewFileItem in extendViewFiles:
+                msg = "Parsing View: {}".format(viewFileItem)
+                logging.info(msg)
+                print(msg)
+                
+                viewObj = View()
+                views = viewObj.getViewInfomationFromFile(viewFileItem, logging)
+                for view in views:
+                    view.schemaName = model.connection.schemaName
+                    view.databaseName = model.connection.databaseName
+                    view.targetSchema = model.name
+                    view.processDimensions()
+                    logging.info('Parsed Views: -------------')
+                    logging.info(view)
+                    viewList.append(view)
+
+            
+
+            for view_ in viewList:
+                logging.info("B Extends Views: -------------------")
+                logging.info(view_)
+                view_.processDimensions()
+                view_.validateDimensions(viewList)
+                logging.info("-------------------------All Dimensions---------------------------------------------")
+                logging.info("Extends Views: -------------------")
+                logging.info(view_)
+                for dimension_ in view_.allDimensions:
+                    logging.info(dimension_)
+
+                logging.info("-------------------------Valid Dimensions---------------------------------------------")
+
+                for dimension_ in view_.validDimensions:
+                    logging.info(dimension_)
+                
+                logging.info("-------------------------Invalid Dimensions---------------------------------------------")
+                for dimension_ in view_.excludedDimensions:
+                    logging.info(dimension_)
 
 
             #
@@ -175,24 +251,34 @@ def main():
             #
 
             for view in viewList:
-                if view.viewType == 'VIEW' or view.viewType == 'PDT':
-                    view.getViewSQL()
-                    view.injectViewSchema()
-                    view.setDBTModelName()
-                    view.injectSqlTableName(viewList)
+                if view.viewType == 'VIEW':
+                    view.getViewSQL(logging)
+                    view.injectViewSchema(logging)
+                    view.setDBTModelName(logging)
+                    view.injectSqlTableName(viewList, logging)
                     view.injectSqlTableNameInSQLTriggerValue(viewList)
-                    view.writedbtModel()
+                    view.writedbtModel(logging)
+            print('-----------------------Process PDTs---------------------------------------------- ')
             
+            for view in viewList:
+                if  view.viewType == 'PDT':
+                    view.getViewSQL(logging)
+                    view.injectViewSchema(logging)
+                    view.setDBTModelName(logging)
+                    view.injectSqlTableName(viewList, logging)
+                    view.injectSqlTableNameInSQLTriggerValue(viewList, logging)
+                    view.writedbtModel(logging)
+            '''
             print('-----------------------Process NDTs---------------------------------------------- ')
             for view in viewList:
                 if view.viewType == 'NDT':
                     logging.info("Processing NDT: {}".format(view.name) )
                     logging.info(view)
-                    view.processNDT(viewList)
+                    view.processNDT(viewList, logging)
                     view.getNDTViewSQL()
                     view.setDBTModelName()                    
                     view.writedbtModel()
-
+            '''
 
 if __name__ == "__main__":
     main()

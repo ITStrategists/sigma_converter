@@ -1,5 +1,6 @@
 import lkml
 import re
+from logger import Logger
 
 class Dimension:
     def __init__(self):
@@ -372,7 +373,9 @@ class Dimension:
         return cleanedDimensions            
 
 
-    def processDimensions(self, viewDimensions, viewMeasures, viewDimensionGroups):
+    def processDimensions(self, viewDimensions, viewMeasures, viewDimensionGroups, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         dimensions_ = []
         for dimensionRow in viewDimensions:
             dimensionObj = Dimension()
@@ -386,7 +389,8 @@ class Dimension:
             dimensions_.append(dimensionObj)
 
         dimensionGroupList = []
-
+        logging.info("DIME_GROUP")
+        logging.info(viewDimensionGroups)
         for dimension_groupRow in viewDimensionGroups:
 
             baseName = None
@@ -416,103 +420,151 @@ class Dimension:
                                 sql="{}".format(baseName)
                             elif timeframe == 'date':
                                 type = 'string'
-                                sql = "TO_CHAR(TO_DATE({}), 'YYYY-MM-DD')".format(baseName)
+                                #sql = "convert_timezone('UTC', 'America/New_York', cast('{}' as timestamp_ntz)) as timestamp)"
+                                sql = """
+                                        TO_CHAR(
+                                        TO_DATE(
+                                            convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))
+                                        ), 'YYYY-MM-DD')
+                                    """.format(baseName)
                             elif timeframe == 'week':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('week', {} ), 'YYYY-MM-DD')".format(baseName)
+                                sql = """
+                                TO_CHAR(
+                                    TO_DATE(
+                                        DATE_TRUNC('week', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))
+                                    ), 'YYYY-MM-DD')
+                                """.format(baseName)
+                                #sql="TO_CHAR(DATE_TRUNC('week', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) as timestamp)), 'YYYY-MM-DD')".format(baseName)
 
                             elif timeframe == 'month':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('month',{}), 'YYYY-MM')".format(baseName)
+                                sql = """
+                                TO_CHAR(
+                                        TO_DATE(
+                                            convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))
+                                        ), 'YYYY-MM')
+                                """.format(baseName)
+                                logging.info("Month Q: {}".format(sql))
+                                #sql="TO_CHAR(DATE_TRUNC('month',convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) as timestamp)), 'YYYY-MM')".format(baseName)
                             elif timeframe == 'time':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('second',{}), 'YYYY-MM-DD HH24:MI:SS')".format(baseName)
+                                sql = """
+                                TO_CHAR(
+                                    TO_DATE(
+                                        DATE_TRUNC('second', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))
+                                    ), 'YYYY-MM-DD HH24:MI:SS')
+                                """.format(baseName)
+                                #sql="TO_CHAR(DATE_TRUNC('month',convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) as timestamp)), 'YYYY-MM-DD HH24:MI:SS')".format(baseName)
                             elif timeframe == 'year':
                                 type = 'number'
-                                sql = "EXTRACT(YEAR FROM {})::integer".format(baseName)
+                                sql = """
+                                EXTRACT(YEAR FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer
+                                """.format(baseName)
                             elif timeframe == 'yesno':
                                 type = 'string'
-                                sql="CASE WHEN {} IS NOT NULL THEN 'YES' ELSE 'NO' END".format(baseName)
+                                sql="CASE WHEN convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) IS NOT NULL THEN 'YES' ELSE 'NO' END".format(baseName)
 
                             elif timeframe == 'day_of_month':
                                 type = 'string'
-                                sql="EXTRACT(DAY FROM {} )::integer".format(baseName)
+                                sql="EXTRACT(DAY FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer".format(baseName)
 
                             elif timeframe == 'day_of_year':
                                 type = 'string'
-                                sql="EXTRACT(DOY FROM {} )::integer".format(baseName)
+                                sql="EXTRACT(DOY FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer".format(baseName)
 
                             elif timeframe == 'hour_of_day':
                                 type = 'string'
-                                sql="CAST(EXTRACT(HOUR FROM CAST({}  AS TIMESTAMP)) AS INT)".format(baseName)
+                                sql="EXTRACT(HOUR FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer".format(baseName)
 
                             elif timeframe == 'time_of_day':
                                 type = 'string'
-                                sql="TO_CHAR({} , 'HH24:MI')".format(baseName)
+                                sql = """
+                                TO_CHAR(
+                                    TO_DATE(
+                                        DATE_TRUNC('second', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))
+                                    ), 'HH24:MI')
+                                """.format(baseName)
+                                #sql="TO_CHAR(convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) as timestamp) , 'HH24:MI')".format(baseName)
 
                             elif timeframe == 'week_of_year':
                                 type = 'string'
-                                sql="EXTRACT(WEEK FROM {} )::int".format(baseName)
-
+                                sql="EXTRACT(WEEK FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer".format(baseName)
+                                
                             elif timeframe == 'fiscal_quarter_of_year':
                                 type = 'string'
-                                sql="(CAST('Q' AS VARCHAR) || CAST(CEIL(EXTRACT(MONTH FROM {} )::integer / 3) AS VARCHAR))".format(baseName)
+                                #sql="(CAST('Q' AS VARCHAR) || CAST(CEIL(EXTRACT(MONTH FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) as timestamp) )::integer / 3) AS VARCHAR))".format(baseName)
+                                sql = """
+                                CAST('Q' AS VARCHAR) || (CEIL(
+                                    EXTRACT(WEEK FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer
+                                    ) / 3)::integer::VARCHAR
+                                """.format(baseName)
 
                             elif timeframe == 'quarter_of_year':
                                 type = 'string'
-                                sql="(CAST('Q' AS VARCHAR) || CAST(CEIL(EXTRACT(MONTH FROM {} )::integer / 3) AS VARCHAR))".format(baseName)
+                                #sql="(CAST('Q' AS VARCHAR) || CAST(CEIL(EXTRACT(MONTH FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) as timestamp) )::integer / 3) AS VARCHAR))".format(baseName)
+                                sql = """
+                                CAST('Q' AS VARCHAR) || (CEIL(
+                                    EXTRACT(WEEK FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer
+                                    ) / 3)::integer::VARCHAR
+                                """.format(baseName)
 
                             elif timeframe == 'day_of_week_index':
                                 type = 'string'
-                                sql="MOD(EXTRACT(DOW FROM {} )::integer - 1 + 7, 7)".format(baseName)
+                                sql="MOD(EXTRACT(DOW FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) )::integer - 1 + 7, 7)".format(baseName)
 
                             elif timeframe == 'fiscal_month_num':
                                 type = 'string'
-                                sql="EXTRACT(MONTH FROM {} )::integer".format(baseName)
+                                sql="MOD(EXTRACT(MONTH FROM convert_timezone('UTC', 'America/New_York', cast(CURRENT_DATE as timestamp_ntz)) )::integer - 1 + 7, 7)".format(baseName)
 
                             elif timeframe == 'fiscal_quarter':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', {} ) AS DATE)), 'YYYY-MM')".format(baseName)
+                                sql = """
+                                CAST('Q' AS VARCHAR) || (CEIL(
+                                    EXTRACT(WEEK FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer
+                                    ) / 3)::integer::VARCHAR
+                                """.format(baseName)
+                                #sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) as timestamp) ) AS DATE)), 'YYYY-MM')".format(baseName)
 
                             elif timeframe == 'fiscal_year':
                                 type = 'string'
-                                sql="EXTRACT(YEAR FROM {} )::integer".format(baseName)
+                                sql="EXTRACT(YEAR FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer".format(baseName)
 
                             elif timeframe == 'hour':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('hour', {} ), 'YYYY-MM-DD HH24')".format(baseName)
+                                sql="TO_CHAR(DATE_TRUNC('hour', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))), 'YYYY-MM-DD HH24')".format(baseName)
 
                             elif timeframe == 'microsecond':
                                 type = 'string'
-                                sql="LEFT(TO_CHAR({} , 'YYYY-MM-DD HH24:MI:SS.FF'), 26)".format(baseName)
+                                sql="LEFT(TO_CHAR(convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) , 'YYYY-MM-DD HH24:MI:SS.FF'), 26)".format(baseName)
 
                             elif timeframe == 'millisecond':
                                 type = 'string'
-                                sql="LEFT(TO_CHAR({} , 'YYYY-MM-DD HH24:MI:SS.FF'), 23)".format(baseName)
+                                sql="LEFT(TO_CHAR(convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) , 'YYYY-MM-DD HH24:MI:SS.FF'), 23)".format(baseName)
 
                             elif timeframe == 'minute':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('minute', {} ), 'YYYY-MM-DD HH24:MI')".format(baseName)
+                                sql="TO_CHAR(DATE_TRUNC('minute', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)), 'YYYY-MM-DD HH24:MI')".format(baseName)
 
                             elif timeframe == 'month_num':
                                 type = 'string'
-                                sql="EXTRACT(MONTH FROM {} )::integer".format(baseName)
+                                sql="EXTRACT(MONTH FROM convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)))::integer".format(baseName)
 
                             elif timeframe == 'quarter':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', {} ) AS DATE)), 'YYYY-MM')".format(baseName)
+                                sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))) AS DATE)), 'YYYY-MM')".format(baseName)
 
                             elif timeframe == 'second':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('second', {} ), 'YYYY-MM-DD HH24:MI:SS')".format(baseName)
+                                sql="TO_CHAR(DATE_TRUNC('second', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))), 'YYYY-MM-DD HH24:MI:SS')".format(baseName)
  
                             elif timeframe == 'day_of_week':
                                 type = 'string'
-                                sql="CASE TO_CHAR({} , 'DY') WHEN 'Tue' THEN 'Tuesday' WHEN 'Wed' THEN 'Wednesday' WHEN 'Thu' THEN 'Thursday' WHEN 'Sat' THEN 'Saturday' ELSE TO_CHAR({} , 'DY') || 'day' END ".format(baseName,baseName)                          
+                                sql="CASE TO_CHAR(convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) , 'DY') WHEN 'Tue' THEN 'Tuesday' WHEN 'Wed' THEN 'Wednesday' WHEN 'Thu' THEN 'Thursday' WHEN 'Sat' THEN 'Saturday' ELSE TO_CHAR({} , 'DY') || 'day' END ".format(baseName,baseName)                          
 
                             elif timeframe == 'month_name':
                                 type = 'string'
-                                sql="DECODE(EXTRACT('month', {} ), 1, 'January', 2, 'February', 3, 'March', 4, 'April', 5, 'May', 6, 'June', 7, 'July', 8, 'August', 9, 'September', 10, 'October', 11, 'November', 12, 'December')".format(baseName)
+                                sql="DECODE(EXTRACT('month', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))), 1, 'January', 2, 'February', 3, 'March', 4, 'April', 5, 'May', 6, 'June', 7, 'July', 8, 'August', 9, 'September', 10, 'October', 11, 'November', 12, 'December')".format(baseName)
                             
                             elif re.search(r'hour\d+', timeframe):
                                 rx = re.compile(r'hour(\d+)')
@@ -521,7 +573,7 @@ class Dimension:
                                 for item in matches_raw:
                                     hourValue = item
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('hour', DATE_TRUNC('hour', DATEADD('HOURS', -1 * (CAST(DATE_PART('HOUR', CAST({}  AS TIMESTAMP)) AS INT) % {}), {} ))), 'YYYY-MM-DD HH24')".format(baseName,hourValue,baseName)
+                                sql="TO_CHAR(DATE_TRUNC('hour', DATE_TRUNC('hour', DATEADD('HOURS', -1 * (CAST(DATE_PART('HOUR', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))) AS INT) % {}), {} ))), 'YYYY-MM-DD HH24')".format(baseName,hourValue,baseName)
 
                             elif re.search(r'millisecond\d+', timeframe):
                                 rx = re.compile(r'millisecond(\d+)')
@@ -530,7 +582,7 @@ class Dimension:
                                 for item in matches_raw:
                                     hourValue = item
                                 type = 'string'
-                                sql="LEFT(TO_CHAR(TO_TIMESTAMP(LEFT(TO_CHAR(DATEADD('NANOSECOND', -1 * (CAST(DATE_PART('NANOSECOND', CAST({}  AS TIMESTAMP)) AS INT) % ({} * 1000000)), {} ), 'YYYY-MM-DD HH24:MI:SS.FF'), 23)), 'YYYY-MM-DD HH24:MI:SS.FF'), 23)".format(baseName,hourValue,baseName)
+                                sql="LEFT(TO_CHAR(TO_TIMESTAMP(LEFT(TO_CHAR(DATEADD('NANOSECOND', -1 * (CAST(DATE_PART('NANOSECOND', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz)) ) AS INT) % ({} * 1000000)), {} ), 'YYYY-MM-DD HH24:MI:SS.FF'), 23)), 'YYYY-MM-DD HH24:MI:SS.FF'), 23)".format(baseName,hourValue,baseName)
 
                             elif re.search(r'minute\d+', timeframe):
                                 rx = re.compile(r'minute(\d+)')
@@ -539,7 +591,7 @@ class Dimension:
                                 for item in matches_raw:
                                     hourValue = item
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('minute', DATE_TRUNC('minute', TO_TIMESTAMP((EXTRACT('EPOCH', CAST({}  AS TIMESTAMP_TZ)) - (EXTRACT('EPOCH', CAST({}  AS TIMESTAMP_TZ)) % (60*{})))))), 'YYYY-MM-DD HH24:MI')".format(baseName,baseName,hourValue)
+                                sql="TO_CHAR(DATE_TRUNC('minute', DATE_TRUNC('minute', TO_TIMESTAMP((EXTRACT('EPOCH', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))) - (EXTRACT('EPOCH', CAST({}  AS TIMESTAMP_TZ)) % (60*{})))))), 'YYYY-MM-DD HH24:MI')".format(baseName,baseName,hourValue)
 
                             dimension_ = Dimension()
                             dict_ = {"name": name, "type":type, "sql": sql}

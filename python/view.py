@@ -3,11 +3,14 @@ import re
 
 from dimension import Dimension
 from column import Column
+from logger import Logger
+from sql_formatter.core import format_sql
 
 class View:
     def __init__(self):
         self.name = ''
         self.sql = ''
+        self.parsedView = None
         self.databaseName = ''
         self.schemaName = ''
         self.dimenions = []
@@ -26,20 +29,32 @@ class View:
         self.exploreSourceView = None
         self.extends = None
         self.extendedView = None
-    def getViewByName(self, viewName, viewList):
+        self.includes = []
+        self.viewDimensions = []
+        self.parsedDimensions = []
+
+    def getViewByName(self, viewName, viewList, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
+        logging.info("Checking View: {}".format(viewName))
         view = None
         for viewItem in viewList:
-            if view.name == viewItem.name:
+            logging.info("{}:{}".format(viewName, viewItem.name))
+            if viewName == viewItem.name:
                 view = viewItem
+                logging.info("Found View: {}".format(viewName))
                 break
         return view
 
-    def processNDTColumns(self, exploreSourceView, columns):
-
+    def processNDTColumns(self, exploreSourceView, columns, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         columns_ = []
         column = []
         
         for column_ in columns:
+            logging.ino("Processing Column.")
+            logging.info(column_)
             print(column_)
             if column_.columnType == 'COLUMN':
                 fieldName = column_.transformExploreField(self.exploreSourceName, column_.field)
@@ -71,18 +86,19 @@ class View:
             print(column_)
 
         for dimension_ in self.allDimensions:
-            column_ = column_.getColumnByName(dimension_.name, columns)
-            if column_ is None:
-                print('Null Column')
-            if dimension_ is None:
-                print('Null dimension')
-            dimension_.sql = column_.sql
-            dimension_.dimensionType = column_.dimensionType
+            logging.info(dimension_)
+            print(dimension_)
+            column_ = Column().getColumnByName(dimension_.name, columns)
+            if column_ is not None:
+                dimension_.sql = column_.sql    
+                dimension_.dimensionType = column_.dimensionType
             
-    def processNDT(self, viewList):
+    def processNDT(self, viewList, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         view_ = self.getViewByName(self.exploreSourceName, viewList)
         self.exploreSourceView = view_
-        processedColumns = self.processNDTColumns(self.exploreSourceView, self.columns)
+        self.processNDTColumns(self.exploreSourceView, self.columns, logging)
 
     
     def getNDTViewSQL(self):
@@ -130,24 +146,90 @@ class View:
         return viewSQL
 
 
-    def setDBTModelName(self):
-        self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_') + '_' + self.name.lower().strip().replace(' ', '_')
+    def setDBTModelName(self, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
+        self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_').replace('&', '_') + '_' + self.name.lower().strip().replace(' ', '_').replace('&', '_')
 
     def getDBTModelName(self):
         return self.dbtModelName
 
+    def processDimensions(self, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
+        logging.info('-----------ViewProcessDimensions')
+        logging.info(self)
+        logging.info(self.parsedView)
+        if self.viewType == 'VIEW' or self.viewType == 'PDT' or self.viewType == 'NDT':
+            viewDimensions = []
+            viewMeasures = []
+            viewDimensionGroups = []
 
+            if 'dimensions' in self.parsedView:
+                viewDimensions = self.parsedView['dimensions']
+                print(viewDimensions)
+
+            if 'measures' in self.parsedView:
+                viewMeasures = self.parsedView['measures']
+
+            if 'dimension_groups' in self.parsedView:
+                logging.info("DG_")
+                logging.info(self.parsedView['dimension_groups'])
+                viewDimensionGroups = self.parsedView['dimension_groups']
+
+            self.parsedDimensions = Dimension().processDimensions(viewDimensions, viewMeasures, viewDimensionGroups)
+            logging.info("-----ParsedDimensions")
+            for dim in self.parsedDimensions:
+                logging.info(dim)
+
+    
+    def validateDimensions(self, views, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
+        viewAndExtendedViewDimensions = []
+
+        for viewDimension in self.parsedDimensions:
+            viewAndExtendedViewDimensions.append(viewDimension)
+        
+        if self.extends is not None:
+            extendedView = self.getViewByName(self.extends, views, logging)
+            
+            logging.info("__eX")
+            logging.info(str(self))
+            logging.info(extendedView)
+            self.sql_table_name = extendedView.sql_table_name
+            for extendedViewDimension in extendedView.parsedDimensions:
+                viewAndExtendedViewDimensions.append(extendedView)
+
+        allDimensions = Dimension().getProcessedSubstituteDimensions(self.parsedDimensions)
+
+        validDimensions = []
+        excludedDimensions = []
+
+        for dimension_ in allDimensions:
+            if not dimension_.isExcluded:
+                validDimensions.append(dimension_)
+            else:
+                excludedDimensions.append(dimension_)
+
+        self.allDimensions = allDimensions
+        self.dimensions = validDimensions
+        self.validDimensions = validDimensions
+        self.excludedDimensions = excludedDimensions
+
+        logging.info("---------------Validated View ------------------")
+        
 
     def setView(self, view, logging = None):
-
-        if 'derived_table' in view:
-            if 'extends__all' in view:
-                self.extends = view['extends__all'][0][0]
-            if 'explore_source' in view['derived_table']:
+        self.parsedView = view
+        if 'derived_table' in self.parsedView:
+            if 'extends__all' in self.parsedView:
+                self.extends = self.parsedView['extends__all'][0][0]
+            if 'explore_source' in self.parsedView['derived_table']:
                 self.viewType = 'NDT'
-                exploreSource = view['derived_table']['explore_source']
+                exploreSource = self.parsedView['derived_table']['explore_source']
                 if 'name' in exploreSource:
-                    self.exploreSourceName = view['derived_table']['explore_source']['name']
+                    self.exploreSourceName = self.parsedView['derived_table']['explore_source']['name']
 
                 if 'columns' in exploreSource:
                     columns = exploreSource['columns']
@@ -162,17 +244,17 @@ class View:
                         columnObj.setColumn(column_, "DERIVED_COLUMN")
                         self.columns.append(columnObj)
             else:        
-                if 'sql' in view['derived_table']:
-                    self.sql = view['derived_table']['sql']
+                if 'sql' in self.parsedView['derived_table']:
+                    self.sql = self.parsedView['derived_table']['sql']
                     self.sql = self.sql.replace('"','\"')
 
-                if 'persist_for' in view['derived_table']:
-                    self.persistedSQL = view['derived_table']['persist_for']
+                if 'persist_for' in self.parsedView['derived_table']:
+                    self.persistedSQL = self.parsedView['derived_table']['persist_for']
                     self.persistedSQL = self.persistedSQL.replace('"', "\"")
                     self.persistedType = 'PERSIST_FOR'
 
-                if 'sql_trigger_value' in view['derived_table']:
-                    self.persistedSQL = view['derived_table']['sql_trigger_value']
+                if 'sql_trigger_value' in self.parsedView['derived_table']:
+                    self.persistedSQL = self.parsedView['derived_table']['sql_trigger_value']
                     self.persistedSQL = self.persistedSQL.replace('"', "\"")
                     self.persistedType = 'SQL_TRIGGER_VALUE'
 
@@ -180,49 +262,9 @@ class View:
 
         elif 'sql_table_name' in view:
             self.viewType = 'VIEW'
-            self.sql_table_name = view['sql_table_name']
-
-        if 'name' in view:
-            self.name = view['name']
-
-
-        if self.viewType == 'VIEW' or self.viewType == 'PDT' or self.viewType == 'NDT':
-
-            dimensions_ = []
-            viewDimensions = []
-            viewMeasures = []
-            viewDimensionGroups = []
-
-            if 'dimensions' in view:
-                viewDimensions = view['dimensions']
-                print(viewDimensions)
-
-            if 'measures' in view:
-                viewMeasures = view['measures']
-
-            if 'dimension_groups' in view:
-                viewDimensionGroups = view['dimension_groups']
-
-            dimensions_ = Dimension().processDimensions(viewDimensions, viewMeasures, viewDimensionGroups)
-
-            allDimensions = Dimension().getProcessedSubstituteDimensions(dimensions_)
-
-            validDimensions = []
-            excludedDimensions = []
-
-            for dimension_ in allDimensions:
-                if not dimension_.isExcluded:
-                    validDimensions.append(dimension_)
-                else:
-                    excludedDimensions.append(dimension_)
-
-            self.allDimensions = allDimensions
-            self.dimensions = validDimensions
-            self.validDimensions = validDimensions
-            self.excludedDimensions = excludedDimensions
-
-            for v in self.excludedDimensions:
-                print(v)
+            self.sql_table_name = self.parsedView['sql_table_name']
+        if 'name' in self.parsedView:
+            self.name = self.parsedView['name']
 
     def checkKeyExists(self, key, dictionary):
         found = False
@@ -240,12 +282,17 @@ class View:
                 val = item
         return val
 
-    def injectViewSchema(self):
-
+    def injectViewSchema(self, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         if self.sql is not None and self.sql != '':
-
+            logging.info("--------Prv View")
+            logging.info(self.sql)
             processedSQL = re.sub(r'\s+',' ', self.sql.replace('\n', ' ').replace('\t', ' '))
-            print("Source SQL: {}".format(processedSQL))
+            #print("Source SQL: {}".format(processedSQL))
+            logging.info("----Source SQL")
+            logging.info(processedSQL)
+            #print("{}".format(processedSQL))
             dependencies = []
 
             keywords = ['lateral']
@@ -254,8 +301,8 @@ class View:
 
             for match in rx.finditer(processedSQL):
                 group = match.group(1)
-                print("-------------------------------------")
-                print(group)
+                #print("-------------------------------------")
+                #print(group)
                 found = False
                 for keyword in keywords:
                     if keyword in group:
@@ -281,39 +328,54 @@ class View:
                             if not check:
                                 dictList.append(dictObj)
 
-                    schemaConcatenatedList = []
+                schemaConcatenatedList = []
 
-                    for item in list_:
-                        key = item.strip()
-                        schemaConcatenatedItem = self.getKeyValue(key, dictList)
-                        value = schemaConcatenatedItem[key]
-                        schemaConcatenatedList.append(value)
+                for item in list_:
+                    key = item.strip()
+                    schemaConcatenatedItem = self.getKeyValue(key, dictList)
+                    value = schemaConcatenatedItem[key]
+                    schemaConcatenatedList.append(value)
 
-                    to_ = "FROM {}".format(' , '.join(schemaConcatenatedList))
+                to_ = "FROM {}".format(' , '.join(schemaConcatenatedList))
 
-                    processedSQL = re.sub(r'{}'.format(from_), to_, processedSQL, flags=re.I)            
+                processedSQL = re.sub(r'{}'.format(from_), to_, processedSQL, flags=re.I)            
 
 
             processedSQL = re.sub(r'\s+',' ', processedSQL)
-            
-            rx = re.compile(r'(\w+\(*\w+\s+)FROM\s+(\w+)', re.IGNORECASE)
+            logging.info("kk: {}".format(self.name))
+            logging.info(processedSQL)
+            rx = re.compile(r'(\w+\(*\w+\s+|\*|\SELECT\s\*)\s*FROM\s+(\w+\.*\w+\.*\w+|\"{0,}\w+\"{0,}\.\"{0,}\w+\"{0,}|\w+)', re.IGNORECASE)
             substitued = []
             for match in rx.finditer(processedSQL):
                 rxExtract = re.compile(r'EXTRACT', re.IGNORECASE)
                 group1 = match.group(1)
-                extractFound = rxExtract.search(group1)
-                if extractFound:
-                    print("Skipping Extract: {}".format(group1))
-                else:
-                    group = match.group(2)
-                    if group not in substitued:
-                        itemStripped = group.strip()
-                        from_ = 'FROM {}'.format(group)
-                        schemaConcatenatedValue ='{}.{}'.format(self.schemaName, itemStripped)
-                        to_ = 'FROM {}'.format(schemaConcatenatedValue)
-                        processedSQL = re.sub(from_, to_, processedSQL, flags=re.I)
 
-                        substitued.append(itemStripped)
+                if group1 is not None:
+                    logging.info("Grp: {}".format(group1))
+                    extractFound = rxExtract.search(group1)
+                    if extractFound:
+                        logging.info("Skipping Table Name because of Extract: {}".format(group1))
+                    else:
+                        group = match.group(2)
+                        logging.info("G2: {}".format(group))
+                        rxCte = re.compile(r'^cte', re.IGNORECASE)
+                        group2 = match.group(1)
+                        cteFound = rxCte.search(group2)
+
+                        if group not in substitued:
+                            logging.info("---Skipping Table Name bacasue of Substituted: {}".format(group))
+                        elif '.' in group:
+                            logging.info("---Skipping Table Name already have schema: {}".format(group))
+                        elif group.lower().startswith('cte'):
+                            logging.info("---Skipping Table Name because of cte: {}".format(group))
+                        else:
+                            itemStripped = group.strip()
+                            from_ = 'FROM {}'.format(group)
+                            schemaConcatenatedValue ='{}.{}'.format(self.schemaName, itemStripped)
+                            to_ = 'FROM {}'.format(schemaConcatenatedValue)
+                            processedSQL = re.sub(from_, to_, processedSQL, flags=re.I)
+
+                            substitued.append(itemStripped)
 
             processedSQL = re.sub(r'\s+',' ', processedSQL)
 
@@ -333,10 +395,10 @@ class View:
                     substitued.append(itemStripped)
 
             processedSQL = re.sub(r'\s+',' ', processedSQL)
-
+            processedSQL = format_sql(processedSQL)
             self.sql = processedSQL
-
-            print(self.sql)
+            logging.info("---------------------Injected ViewSchema: {}".format(self.name))
+            logging.info(self.sql)
 
     def __str__(self):
         return """
@@ -348,7 +410,9 @@ class View:
             Persisted SQL   :     {persistedSQL}
             Extends         :     {extends}
             SQL             :     {sql}
-            """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL, viewType = self.viewType, exploreSourceName = self.exploreSourceName, extends = self.extends)
+            SQL Table Name  :     {sqlTableName}
+            Includes        :     {includes}
+            """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL, viewType = self.viewType, exploreSourceName = self.exploreSourceName, extends = self.extends, sqlTableName = self.sql_table_name, includes=self.includes)
 
     
     def getViewInfomationFromFile(self, fileName, logging = None):
@@ -359,17 +423,21 @@ class View:
             parsed = lkml.load(file)
             print(parsed)
             logging.info(parsed)
-
+            includes = []
+            if 'includes' in parsed:
+                includes = parsed['includes']
             for view in parsed['views']:
 
                 viewObj = View()
-
                 viewObj.setView(view)
+                viewObj.includes = includes
                 views.append(viewObj)
 
         return views
 
-    def injectSqlTableName(self, views):
+    def injectSqlTableName(self, views, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         rx = re.compile(r'\$\{(\w+)\.SQL_TABLE_NAME\}',re.IGNORECASE)
         for match in rx.finditer(self.sql):
             group = match.group(1)
@@ -383,7 +451,9 @@ class View:
 
             self.sql = processedSQL
 
-    def injectSqlTableNameInSQLTriggerValue(self, views):
+    def injectSqlTableNameInSQLTriggerValue(self, views, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         rx = re.compile(r'\$\{(\w+)\.SQL_TABLE_NAME\}',re.IGNORECASE)
         for match in rx.finditer(self.persistedSQL):
             group = match.group(1)
@@ -399,19 +469,9 @@ class View:
 
             self.persistedSQL = processedSQL
 
-
-    
-    def getViewByName(self, name, views):
-        view = None
-
-        for view_ in views:
-            if view_.name == name:
-                view = view_
-                break
-        return view
-
-    def writedbtModel(self):
-
+    def writedbtModel(self, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         if self.viewType == 'PDT':
             placeholder = 'pdt_placeholder.ddl'
         elif self.viewType == 'NDT':
@@ -431,7 +491,8 @@ class View:
         dbtrunPresistedModelsPath = "run_presisted_models.sh"
 
         sql = self.sql
-
+        logging.info("------------Final SQL for {}".format(self.name))
+        logging.info(sql)
         content = placeholder \
                     .replace("@@SCHEMA@@",self.targetSchema.lower().strip()) \
                     .replace("@@ALIAS@@", self.name.lower().strip()) \
@@ -452,8 +513,9 @@ class View:
         with open(dbtrunModelsPath, 'a') as file:
             file.write(content)
 
-    def getViewSQL(self):
-
+    def getViewSQL(self, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         viewSQL = ''
 
         dimList = []
@@ -474,12 +536,24 @@ class View:
             cols = '*'
 
         if self.viewType == 'PDT':
+            rx = re.compile(r'(--.*\n)',re.IGNORECASE)
+            tempSQL = self.sql
+            for match in rx.finditer(tempSQL):
+                group = match.group(1)
+                print("-------------------------------------")
+                logging.info("---Found Comment: {}".format(group))
+                newGroup = '/*{}*/'.format(group.strip('\n'))
+                tempSQL = tempSQL.replace(group, newGroup)
+            logging.info("PDTtmpSQL-----------{}--------------------------".format(self.name))
+            logging.info(tempSQL)
+
             viewSQL = """
             SELECT
             {cols}
             FROM ({sql})
-            """.format(cols = cols, sql = self.sql)
+            """.format(cols = cols, sql = tempSQL)
         elif self.viewType == 'VIEW':
+            
             viewSQL = """
             SELECT
             {cols}
@@ -487,10 +561,8 @@ class View:
             """.format(cols = cols, sql = self.sql_table_name)
         else:
             viewSQL = ''
-
-        self.sql = viewSQL    
+        viewSQL = format_sql(viewSQL)
+        self.sql = viewSQL
+        logging.info("-------------FORMATED VIEW-----------------")
+        logging.info(viewSQL)
         return viewSQL
-
-
-
-
