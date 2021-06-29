@@ -1,3 +1,4 @@
+import os
 import lkml
 import re
 
@@ -149,7 +150,8 @@ class View:
     def setDBTModelName(self, logging = None):
         if logging is None:
             logging = Logger().getLogger()
-        self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_').replace('&', '_') + '_' + self.name.lower().strip().replace(' ', '_').replace('&', '_')
+        #self.dbtModelName = self.targetSchema.lower().strip().replace(' ', '_').replace('&', '_') + '_' + self.name.lower().strip().replace(' ', '_').replace('&', '_')
+        self.dbtModelName = self.name
 
     def getDBTModelName(self):
         return self.dbtModelName
@@ -177,7 +179,7 @@ class View:
                 logging.info(self.parsedView['dimension_groups'])
                 viewDimensionGroups = self.parsedView['dimension_groups']
 
-            self.parsedDimensions = Dimension().processDimensions(viewDimensions, viewMeasures, viewDimensionGroups)
+            self.parsedDimensions = Dimension().processDimensions(viewDimensions, viewMeasures, viewDimensionGroups, logging)
             logging.info("-----ParsedDimensions")
             for dim in self.parsedDimensions:
                 logging.info(dim)
@@ -438,16 +440,16 @@ class View:
     def injectSqlTableName(self, views, logging = None):
         if logging is None:
             logging = Logger().getLogger()
-        rx = re.compile(r'\$\{(\w+)\.SQL_TABLE_NAME\}',re.IGNORECASE)
+        rx = re.compile(r'\$\{(\w+)\.(SQL_TABLE_NAME)\}',re.IGNORECASE)
         for match in rx.finditer(self.sql):
             group = match.group(1)
-            
+            group2 = match.group(2)
             view = self.getViewByName(group.lower().strip(), views)
             dbtModelName = view.getDBTModelName() 
 
             ref = r"{{ref('" + dbtModelName +r"')}}"
-
-            processedSQL = re.sub(r'\$\{\w+\.SQL_TABLE_NAME\}',ref, self.sql)
+            sub = r"\$\{\w+\."+ group2 +"\}"
+            processedSQL = re.sub(sub,ref, self.sql)
 
             self.sql = processedSQL
 
@@ -469,7 +471,7 @@ class View:
 
             self.persistedSQL = processedSQL
 
-    def writedbtModel(self, logging = None):
+    def writedbtModel(self, connectionName, schemaName, logging = None):
         if logging is None:
             logging = Logger().getLogger()
         if self.viewType == 'PDT':
@@ -483,9 +485,11 @@ class View:
         placeholder = f.read()
         dbtModelName = self.dbtModelName
 
-        fileName = dbtModelName + '.sql'
-
-        filePath = "../models/" + fileName
+        fileName = self.name + '.sql'
+        dirName = "../models/{}".format(connectionName)
+        if not os.path.exists(dirName):
+            os.makedirs(dirName)
+        filePath = os.path.join(dirName,fileName)
 
         dbtrunModelsPath = "run_models.sh" 
         dbtrunPresistedModelsPath = "run_presisted_models.sh"
@@ -494,7 +498,7 @@ class View:
         logging.info("------------Final SQL for {}".format(self.name))
         logging.info(sql)
         content = placeholder \
-                    .replace("@@SCHEMA@@",self.targetSchema.lower().strip()) \
+                    .replace("@@SCHEMA@@",schemaName) \
                     .replace("@@ALIAS@@", self.name.lower().strip()) \
                     .replace("@@SQL@@", sql) \
                     .replace("@@PERSISTED_TYPE@@", self.persistedType) \

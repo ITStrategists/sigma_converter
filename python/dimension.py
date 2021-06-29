@@ -112,9 +112,72 @@ class Dimension:
         self.transformTableDimensions()
    
    
-    def transformTierDimension(self, tiers ,style):
+    def transformTierDimension(self, tiers ,style, logging = None):
         if tiers is not None:
-            difference=int(tiers[1])-int(tiers[0])
+            tiers_data = []
+            for tier in tiers:
+                tiers_data.append(
+                {
+                    "origional_tier_value": tier,
+                    "tier_float_value": float(tier)
+                })
+            logging.info("Prev Tier")
+            logging.info(tiers_data)
+
+            tiers_data.sort(key=lambda x: x.get('tier_float_value'))
+            logging.info("Sorted Tier")
+            logging.info(tiers_data)
+            queryList = []
+            if style == 'integer':
+                below = ''
+            if len(tiers) >= 2:
+                for index in range(len(tiers_data)):
+                    query = ''
+                    if index == 0:
+                        sql = self.sql
+                        value = tiers_data[index]["origional_tier_value"]
+                        if style=='integer':
+                            query="CASE WHEN {}  < {} THEN 'Below {}'".format(sql, value, value)
+                        elif style == 'relational':
+                            query="CASE WHEN {}  < {} THEN '< {}'".format(sql, value, value)
+                        elif style == 'classic':
+                            query="CASE WHEN {}  < {} THEN 'T{:02d} (-inf,{})'".format(sql, value, value)
+                        elif style == 'interval':
+                            query="CASE WHEN {}  < {} THEN '(-inf,{})'".format(sql, value, value)
+                    elif index == len(tiers_data) - 1:
+                        sql = self.sql
+                        value = tiers_data[index]["origional_tier_value"]
+                        if style=='integer':
+                            query="WHEN {}  >= {} THEN '{} or Above' ELSE 'Undefined' END".format(sql, value, value)
+                        elif style == 'relational':
+                            query="WHEN {}  >= {} THEN '>={}' ELSE 'Undefined' END".format(sql, value, value)
+                        elif style == 'classic':
+                            query="WHEN {}  >= {} THEN 'T{:02d} [{},inf)' ELSE 'TXX Undefined' END".format(sql, value, index, value)
+                        elif style == 'interval':
+                            query="WHEN {}  >= {} THEN '[{},inf)' ELSE 'Undefined' END".format(sql, value, value)
+                    else:
+                        first_value = tiers_data[index]["origional_tier_value"]
+                        second_value = tiers_data[index + 1]["origional_tier_value"]
+                        logging.info('Index: {}:{}:{}'.format(index, first_value, second_value))
+                        if style=='integer':
+                            query="WHEN {} >= {} AND {}  < {} THEN '{} to {}'".format(sql, first_value, sql, second_value, first_value, second_value)
+                        elif style == 'relational':
+                            query="WHEN {} >= {} AND {}  < {} THEN '>={} and <{}'".format(sql, first_value, sql, second_value, first_value, second_value)
+                        elif style == 'classic':
+                            query="WHEN {}  >= {} AND {}  < {} THEN 'T{:02d} [{},{})'".format(sql, first_value, sql, second_value, index + 1, first_value, second_value)
+                        elif style == 'interval':
+                            query="CASE WHEN {} >= {} AND {} < {} THEN '[{},{})".format(sql, first_value, sql, second_value, first_value, second_value)
+                    queryList.append(query)
+                self.sql = '\n'.join(queryList)
+                logging.info("TierFinal---")
+                logging.info(self.sql)
+
+            '''
+            
+
+
+            difference=int(float(tiers[1]))-int(float(tiers[0]))
+            floatdifference = float(tiers[1])-float(tiers[0])
             finalquery=''
             i=00
             for value in tiers:
@@ -130,13 +193,13 @@ class Dimension:
                     
                     
                 if style=='relational':
-                    diff_from_value=float(value)-float(difference)
+                    diff_from_value=float(value)-float(floatdifference)
                     minus_one_value=float(value)
-                    if int(value)==0:
+                    if float(value)==0:
                         query="CASE WHEN {}  < {} THEN '< {}'".format(self.sql,float(value),float(value))
                         finalquery = '{} {}'.format(finalquery, query)
                     
-                    if int(value)>0:
+                    if float(value)>0:
                         query="WHEN {}  >= {} AND {}  < {} THEN '>={} and <{}'".format(self.sql,float(diff_from_value),self.sql,float(value),float(diff_from_value),float(minus_one_value))
                         finalquery = '{} {}'.format(finalquery, query)
 
@@ -161,7 +224,7 @@ class Dimension:
                         query="CASE WHEN {}  < {} THEN '(-inf,{})'".format(self.sql,float(value),float(value))
                         finalquery = '{} {}'.format(finalquery, query)
                     if int(value)>0:
-                        query="WHEN {}  >= {} AND {}  < {} THEN '[{},{})'".format(self.sql,float(diff_from_value),self.sql,float(value),float(diff_from_value),float(minus_one_value))
+                        query="CASE WHEN {}  >= {} AND {}  < {} THEN '[{},{})'".format(self.sql,float(diff_from_value),self.sql,float(value),float(diff_from_value),float(minus_one_value))
                         finalquery = '{} {}'.format(finalquery, query)
 
                 i=i+1
@@ -178,6 +241,9 @@ class Dimension:
             elif style == 'interval':
                 query="WHEN {}  >= {} THEN '[{},inf)' ELSE 'Undefined' END".format(self.sql,float(value),float(value))
                 finalquery = '{} {}'.format(finalquery, query)
+            self.sql = finalquery
+            '''
+            
 
 
     def duration_day(self, sql_start, sql_end):
@@ -240,7 +306,7 @@ class Dimension:
         self.endLocationField = endLocationField
 
 
-    def setDimension(self, dimension, dimensionType):
+    def setDimension(self, dimension, dimensionType,logging = None):
 
         self.dimensionType = dimensionType
 
@@ -282,7 +348,7 @@ class Dimension:
                 if 'tiers' in dimension:
                     tiers = dimension['tiers']
                     style = dimension['style']
-                    self.transformTierDimension(tiers,style)
+                    self.transformTierDimension(tiers,style,logging)
 
             if self.type == 'yesno':
                 self.transformYesNoDiemension()
@@ -379,13 +445,13 @@ class Dimension:
         dimensions_ = []
         for dimensionRow in viewDimensions:
             dimensionObj = Dimension()
-            dimensionObj.setDimension(dimensionRow, 'DIMENSION')
+            dimensionObj.setDimension(dimensionRow, 'DIMENSION', logging)
             dimensions_.append(dimensionObj)
 
             
         for dimensionRow in viewMeasures:
             dimensionObj = Dimension()
-            dimensionObj.setDimension(dimensionRow, 'MEASURE')
+            dimensionObj.setDimension(dimensionRow, 'MEASURE', logging)
             dimensions_.append(dimensionObj)
 
         dimensionGroupList = []
@@ -552,7 +618,8 @@ class Dimension:
 
                             elif timeframe == 'quarter':
                                 type = 'string'
-                                sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))) AS DATE)), 'YYYY-MM')".format(baseName)
+                                sql = "(TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', CONVERT_TIMEZONE('UTC', 'America/New_York', CAST({} AS TIMESTAMP_NTZ))) AS DATE)), 'YYYY-MM'))".format(baseName)
+                                #sql="TO_CHAR(DATE_TRUNC('month', CAST(DATE_TRUNC('quarter', convert_timezone('UTC', 'America/New_York', cast({} as timestamp_ntz))) AS DATE)), 'YYYY-MM')".format(baseName)
 
                             elif timeframe == 'second':
                                 type = 'string'

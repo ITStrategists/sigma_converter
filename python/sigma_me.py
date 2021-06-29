@@ -16,9 +16,11 @@ class Model:
         self.label = None
         self.includes = None
         self.modelFileInformation = None
+        self.schemaName = None
 
     def setModel(self, model):
         source_schema_initial = os.getenv('SIGMA_ME_SCHEMA')
+        self.schemaName = source_schema_initial
         if 'label' in model:
             self.label = model['label']
             self.name = "{}_{}".format(source_schema_initial.upper(), self.label.upper().replace(' ', '_'))
@@ -100,10 +102,9 @@ def main():
     logging.info(modelFilesList)
 
     for modelFileItem in modelFilesList:
-        if modelFileItem['FileName'] != 'adthrive_ds_athena.model.lkml':
-            #print("adthrive_ds_athena.model.lkml")
-            continue
-            
+        #if modelFileItem['FileName'] != 'itf_monitoring.model.lkml':
+            #print(modelFileItem['FileName'])
+            #continue
         
         logging.info("Model To Be Parsed. {}".format(modelFileItem['FileName']))
 
@@ -256,8 +257,8 @@ def main():
                     view.injectViewSchema(logging)
                     view.setDBTModelName(logging)
                     view.injectSqlTableName(viewList, logging)
-                    view.injectSqlTableNameInSQLTriggerValue(viewList)
-                    view.writedbtModel(logging)
+                    view.injectSqlTableNameInSQLTriggerValue(viewList, logging)
+                    view.writedbtModel(model.connectionName, model.schemaName, logging)
             print('-----------------------Process PDTs---------------------------------------------- ')
             
             for view in viewList:
@@ -267,7 +268,7 @@ def main():
                     view.setDBTModelName(logging)
                     view.injectSqlTableName(viewList, logging)
                     view.injectSqlTableNameInSQLTriggerValue(viewList, logging)
-                    view.writedbtModel(logging)
+                    view.writedbtModel(model.connectionName, model.schemaName, logging)
             '''
             print('-----------------------Process NDTs---------------------------------------------- ')
             for view in viewList:
