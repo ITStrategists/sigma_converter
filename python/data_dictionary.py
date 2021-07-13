@@ -100,6 +100,9 @@ for model in models:
 
         print("Trying ... {}:{}".format(model.name, explore.name))
 
+        #if model.name == 'cls_not_from_ads' and explore.name == 'CLS_not_from_ads_explore':
+        #    continue
+
         exploreObj = sdk.lookml_model_explore(lookml_model_name=model.name,explore_name=explore.name)
         print(exploreObj.id)
         exploreObj.aliases

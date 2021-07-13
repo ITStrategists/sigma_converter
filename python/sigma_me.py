@@ -102,9 +102,9 @@ def main():
     logging.info(modelFilesList)
 
     for modelFileItem in modelFilesList:
-        #if modelFileItem['FileName'] != 'itf_monitoring.model.lkml':
-            #print(modelFileItem['FileName'])
-            #continue
+        if modelFileItem['FileName'] != 'adthrive_ds_athena.model.lkml':
+            print(modelFileItem['FileName'])
+            continue
         
         logging.info("Model To Be Parsed. {}".format(modelFileItem['FileName']))
 
@@ -131,21 +131,6 @@ def main():
                     viewFileList.append(fileToBeIncluded)
                 if not found:
                     filesNotFound.append(includeItem)
-                '''
-                dir = model.modelFileInformation["DirName"]
-                viewFileName = os.path.join(rootDir, includeItem.split('/', 1)[-1])
-                logging.info(viewFileName)
-                if viewFileName.endswith('view'):
-                    viewFileName = "{}.lkml".format(viewFileName)
-                #logging.info("Checking: {}".format(viewFileName))
-                found = False
-                for name in glob.glob(viewFileName):
-                    #logging.info("ViewFile: {}".format(name))
-                    found = True
-                    viewFileList.append(name)
-
-                
-                '''
             logging.info("Views to be Parsed: -------------")
             for viewItem in viewFileList:
                 logging.info(viewItem)
@@ -155,29 +140,40 @@ def main():
                 logging.info(viewItem)
             
             for viewFileItem in viewFileList:
-                #if viewFileItem['FileName'] != 'order_items.view.lkml' and viewFileItem['FileName'] != 'user_order_facts.view.lkml':
-                #    print('')
-                    #continue
+                if viewFileItem != os.path.join(rootDir,'_earnings_and_analytics.view.lkml'):
+                    continue
                 msg = "Parsing View: {}".format(viewFileItem)
                 logging.info(msg)
                 print(msg)
                 
                 viewObj = View()
-                views = viewObj.getViewInfomationFromFile(viewFileItem, logging)
+                views = viewObj.getViewInformationFromFile(viewFileItem, False, logging)
                 for view in views:
                     view.schemaName = model.connection.schemaName
                     view.databaseName = model.connection.databaseName
                     view.targetSchema = model.name
-                    view.processDimensions()
+                    view.processExtendedView(rootDir, logging)
+                    view.parseDimensions()
                     logging.info('Parsed Views: -------------')
                     logging.info(view)
                     viewList.append(view)
 
+            for view in viewList:
+                view.processDimensions(logging)
 
+            for view in viewList:
+                view.validateDimensions(viewList, logging)
+
+            
+            
+
+            '''
             extendedViewNamesRaw = []
             extendedViewNames = []
             for view_ in viewList:
                 for includeView in view_.includes:
+                    logging.info("IncludedView: ")
+                    logging.info(includeView)
                     if includeView is not None:
                         for alreadyParsedView in model.includes:
                             #logging.info("Already Parsed View Compare: {}: {}".format(alreadyParsedView, includeView))
@@ -209,7 +205,7 @@ def main():
                     extendedFilesNotFound.append(extendedViewName)
 
             for viewFileItem in extendViewFiles:
-                msg = "Parsing View: {}".format(viewFileItem)
+                msg = "Parsing Extended View: {}".format(viewFileItem)
                 logging.info(msg)
                 print(msg)
                 
@@ -219,20 +215,15 @@ def main():
                     view.schemaName = model.connection.schemaName
                     view.databaseName = model.connection.databaseName
                     view.targetSchema = model.name
-                    view.processDimensions()
-                    logging.info('Parsed Views: -------------')
-                    logging.info(view)
+                    view.processDimensions(logging)
                     viewList.append(view)
-
             
-
             for view_ in viewList:
-                logging.info("B Extends Views: -------------------")
+                logging.info("Extends Views: -------------------")
                 logging.info(view_)
                 view_.processDimensions()
                 view_.validateDimensions(viewList)
-                logging.info("-------------------------All Dimensions---------------------------------------------")
-                logging.info("Extends Views: -------------------")
+                logging.info("------------------------- Extends Views All Dimensions---------------------------------------------")
                 logging.info(view_)
                 for dimension_ in view_.allDimensions:
                     logging.info(dimension_)
@@ -245,24 +236,15 @@ def main():
                 logging.info("-------------------------Invalid Dimensions---------------------------------------------")
                 for dimension_ in view_.excludedDimensions:
                     logging.info(dimension_)
-
-
+            '''
+            
             #
             #Process VIEWS AND PDTS
             #
-
+            logging.info('-----------------------Process VIEWS for model {}---------------------------------------------- '.format(model.name))
             for view in viewList:
                 if view.viewType == 'VIEW':
-                    view.getViewSQL(logging)
-                    view.injectViewSchema(logging)
-                    view.setDBTModelName(logging)
-                    view.injectSqlTableName(viewList, logging)
-                    view.injectSqlTableNameInSQLTriggerValue(viewList, logging)
-                    view.writedbtModel(model.connectionName, model.schemaName, logging)
-            print('-----------------------Process PDTs---------------------------------------------- ')
-            
-            for view in viewList:
-                if  view.viewType == 'PDT':
+                    logging.info("Processing VIEW: {}".format(view.name) )
                     view.getViewSQL(logging)
                     view.injectViewSchema(logging)
                     view.setDBTModelName(logging)
@@ -270,16 +252,27 @@ def main():
                     view.injectSqlTableNameInSQLTriggerValue(viewList, logging)
                     view.writedbtModel(model.connectionName, model.schemaName, logging)
             '''
-            print('-----------------------Process NDTs---------------------------------------------- ')
+            logging.info('-----------------------Process PDTs for model {}---------------------------------------------- '.format(model.name))
+            for view in viewList:
+                if  view.viewType == 'PDT':
+                    logging.info("Processing PDT: {}".format(view.name) )
+                    view.getViewSQL(logging)
+                    view.injectViewSchema(logging)
+                    view.setDBTModelName(logging)
+                    view.injectSqlTableName(viewList, logging)
+                    view.injectSqlTableNameInSQLTriggerValue(viewList, logging)
+                    view.writedbtModel(model.connectionName, model.schemaName, logging)
+            logging.info('-----------------------Process NDTs for model {}---------------------------------------------- '.format(model.name))
             for view in viewList:
                 if view.viewType == 'NDT':
                     logging.info("Processing NDT: {}".format(view.name) )
-                    logging.info(view)
-                    view.processNDT(viewList, logging)
-                    view.getNDTViewSQL()
-                    view.setDBTModelName()                    
-                    view.writedbtModel()
-            '''
+                    view.getViewSQL(logging)
+                    view.injectViewSchema(logging)
+                    view.setDBTModelName(logging)
+                    view.injectSqlTableName(viewList, logging)
+                    view.injectSqlTableNameInSQLTriggerValue(viewList, logging)
+                    view.writedbtModel(model.connectionName, model.schemaName, logging)
+            '''  
 
 if __name__ == "__main__":
     main()

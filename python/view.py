@@ -1,6 +1,7 @@
 import os
 import lkml
 import re
+import glob
 
 from dimension import Dimension
 from column import Column
@@ -156,38 +157,128 @@ class View:
     def getDBTModelName(self):
         return self.dbtModelName
 
-    def processDimensions(self, logging = None):
+    def processExtendedView(self, rootDir, logging = None):
         if logging is None:
             logging = Logger().getLogger()
-        logging.info('-----------ViewProcessDimensions')
-        logging.info(self)
-        logging.info(self.parsedView)
-        if self.viewType == 'VIEW' or self.viewType == 'PDT' or self.viewType == 'NDT':
+
+        if self.extends is not None:
+            msg = """
+            Processing Extended View: {}
+            """.format(self.extends)
+            logging.info(msg)
+
+            vFileName = '{}.view.lkml'.format(self.extends)
+
+            vFilePath = self.getFilePath(rootDir, vFileName, logging)[0]
+            print(vFilePath)
+
+            views = self.getViewInformationFromFile(vFilePath, True, logging)            
+            
+            extendedView = views[0]
+
+            msg = """
+            Processed Extended View: {}
+            """.format(views[0])
+            logging.info(msg)
+
+            extendedView.parseDimensions(logging)
+
+            self.extendedView = extendedView
+
+    def getFilePath(self, rootDir, includeItem, logging = None):
+        
+        if logging is None:
+            logging = Logger().getLogger()
+
+        viewFileList = []
+        viewFileName = os.path.join(rootDir, includeItem.split('/', 1)[-1])
+        logging.info(viewFileName)
+        if viewFileName.endswith('view'):
+            viewFileName = "{}.lkml".format(viewFileName)
+        #logging.info("Checking: {}".format(viewFileName))
+        for name in glob.glob(viewFileName):
+            #logging.info("ViewFile: {}".format(name))
+            viewFileList.append(name)
+        return viewFileList
+
+    def parseDimensions(self, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
+        
+        if self.viewType == 'VIEW' or self.viewType == 'PDT' or self.viewType == 'NDT' or self.viewType == 'EXTENDED':
             viewDimensions = []
             viewMeasures = []
             viewDimensionGroups = []
 
             if 'dimensions' in self.parsedView:
                 viewDimensions = self.parsedView['dimensions']
-                print(viewDimensions)
+                logging.info("Dimensions in parsed View")
+                logging.info(viewDimensions)
 
             if 'measures' in self.parsedView:
                 viewMeasures = self.parsedView['measures']
+                logging.info("Dimensions in parsed View")
+                logging.info(viewMeasures)
 
             if 'dimension_groups' in self.parsedView:
-                logging.info("DG_")
-                logging.info(self.parsedView['dimension_groups'])
                 viewDimensionGroups = self.parsedView['dimension_groups']
+                logging.info("Dimension Groups in parsed View")
+                logging.info(viewDimensionGroups)
 
             self.parsedDimensions = Dimension().processDimensions(viewDimensions, viewMeasures, viewDimensionGroups, logging)
-            logging.info("-----ParsedDimensions")
+            msg = """
+            View : {}
+            Info : Parsed Dimensions
+            """.format(self.name)
+            logging.info(msg)
             for dim in self.parsedDimensions:
                 logging.info(dim)
 
-    
+    def processDimensions(self, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
+
+        if self.extendedView is not None:
+            msg = """
+            View : {}
+            Info : Append extended dimensions from base view {}
+            """.format(self.name, self.extendedView.name)
+            logging.info(msg)
+            for dimensionFromExtendedDimensions in self.extendedView.parsedDimensions:
+                self.parsedDimensions.append(dimensionFromExtendedDimensions)
+
+        self.allDimensions = Dimension().getProcessedSubstituteDimensions(self.parsedDimensions)
+
+        for dimension in self.allDimensions:
+            msg = """
+            View : {}
+            Info : All dimensions {}
+            """.format(self.name, dimension)
+            logging.info(msg)
+
     def validateDimensions(self, views, logging = None):
         if logging is None:
             logging = Logger().getLogger()
+
+        if self.viewType == 'VIEW':
+            allDimensions = Dimension().getProcessedSubstituteDimensions(self.parsedDimensions)
+
+            validDimensions = []
+            excludedDimensions = []
+
+            for dimension_ in allDimensions:
+                if not dimension_.isExcluded:
+                    validDimensions.append(dimension_)
+                else:
+                    excludedDimensions.append(dimension_)
+
+            self.allDimensions = allDimensions
+            self.dimensions = validDimensions
+            self.validDimensions = validDimensions
+            self.excludedDimensions = excludedDimensions
+
+
+        '''
         viewAndExtendedViewDimensions = []
 
         for viewDimension in self.parsedDimensions:
@@ -195,10 +286,6 @@ class View:
         
         if self.extends is not None:
             extendedView = self.getViewByName(self.extends, views, logging)
-            
-            logging.info("__eX")
-            logging.info(str(self))
-            logging.info(extendedView)
             self.sql_table_name = extendedView.sql_table_name
             for extendedViewDimension in extendedView.parsedDimensions:
                 viewAndExtendedViewDimensions.append(extendedView)
@@ -220,7 +307,7 @@ class View:
         self.excludedDimensions = excludedDimensions
 
         logging.info("---------------Validated View ------------------")
-        
+        '''
 
     def setView(self, view, logging = None):
         self.parsedView = view
@@ -267,6 +354,8 @@ class View:
             self.sql_table_name = self.parsedView['sql_table_name']
         if 'name' in self.parsedView:
             self.name = self.parsedView['name']
+        if 'extends__all' in self.parsedView:
+                self.extends = self.parsedView['extends__all'][0][0]
 
     def checkKeyExists(self, key, dictionary):
         found = False
@@ -417,13 +506,14 @@ class View:
             """.format(name = self.name, persistedType = self.persistedType, sql = self.sql, persistedSQL = self.persistedSQL, viewType = self.viewType, exploreSourceName = self.exploreSourceName, extends = self.extends, sqlTableName = self.sql_table_name, includes=self.includes)
 
     
-    def getViewInfomationFromFile(self, fileName, logging = None):
-
+    def getViewInformationFromFile(self, fileName, isExtended = False, logging = None):
+        if logging is None:
+            logging = Logger().getLogger()
         views = []
 
         with open(fileName, 'r') as file:
             parsed = lkml.load(file)
-            print(parsed)
+            #print(parsed)
             logging.info(parsed)
             includes = []
             if 'includes' in parsed:
@@ -433,6 +523,8 @@ class View:
                 viewObj = View()
                 viewObj.setView(view)
                 viewObj.includes = includes
+                if isExtended:
+                    viewObj.viewType = 'EXTENDED'
                 views.append(viewObj)
 
         return views
@@ -563,6 +655,20 @@ class View:
             {cols}
             FROM {sql}
             """.format(cols = cols, sql = self.sql_table_name)
+        elif self.viewType == 'NDT':
+            tempSQL = self.sql
+            logging.info("NDT: SQL")
+            logging.info(tempSQL)
+            
+
+            logging.info("NDT: SQL")
+            logging.info(cols)
+
+            viewSQL = """
+            SELECT
+                {cols}
+            FROM {sql}
+            """.format(cols = cols, sql = tempSQL)
         else:
             viewSQL = ''
         viewSQL = format_sql(viewSQL)

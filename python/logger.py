@@ -10,7 +10,7 @@ class Logger:
         logger = logging
         baseDir = '../logs'
         os.makedirs(baseDir, exist_ok=True)
-        logger.basicConfig(filename='{baseDir}/converter.log'.format(baseDir = baseDir),level=logging.INFO, filemode='a', format = '%(asctime)s:%(levelname)s:%(message)s')
+        logger.basicConfig(filename='{baseDir}/converter.log'.format(baseDir = baseDir),level=logging.INFO, filemode='w', format = '%(asctime)s:%(levelname)s:%(message)s')
         return logger
 
 
