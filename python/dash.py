@@ -5,6 +5,8 @@ import pandas as pd
 sdk = looker_sdk.init31('looker.ini')
 
 logging.basicConfig(filename='data_dictionary.log',level=logging.INFO, filemode='w', format = '%(asctime)s:%(levelname)s:%(message)s')
+'''
+
 spaces = sdk.all_spaces()
 spacesDictList = []
 total_spaces = 0
@@ -150,12 +152,11 @@ logging.info("To be Migrated Dashboards: {}".format(total_dashboards - deleted_d
 
 
 
-'''
 
 path = 'dashboards.xlsx'
 writer = pd.ExcelWriter(path, engine='xlsxwriter')
 
-'''
+
 allDashboardList = pd.DataFrame(dashboardDictList)
 allDashboardList.to_excel(writer,sheet_name='Dashboards',index=False)
 
@@ -163,4 +164,6 @@ allDashboardList.to_excel(writer,sheet_name='Dashboards',index=False)
 
 allSpacesList = pd.DataFrame(spacesDictList)
 allSpacesList.to_excel(writer,sheet_name='Spaces',index=False)
+'''
+
 writer.save()
