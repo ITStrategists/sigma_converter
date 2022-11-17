@@ -1,9 +1,7 @@
 import looker_sdk
 import logging
-import json
 import re
 import pandas as pd
-from itertools import chain
 
 logging.basicConfig(filename='data_dictionary.log',level=logging.INFO, filemode='w', format = '%(asctime)s:%(levelname)s:%(message)s')
 
