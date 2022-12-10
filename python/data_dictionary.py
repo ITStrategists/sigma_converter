@@ -1493,7 +1493,7 @@ for i in range(0, len(n)- 1):
 
 rez = [[m[j][i] for j in range(len(m))] for i in range(len(m[0]))]
 
-writer = pd.ExcelWriter(path, engine='xlsxwriter', engine_kwargs={'options':{'strings_to_urls': False}})
+writer = pd.ExcelWriter(path, engine='xlsxwriter')
 
 df = pd.DataFrame({'': []})
 
